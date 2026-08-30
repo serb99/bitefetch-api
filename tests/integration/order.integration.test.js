@@ -2,7 +2,6 @@ require('dotenv').config();
 const request = require('supertest');
 const app = require('../../app');
 const pool = require('../../database/pool');
-const expectCookies = require('supertest/lib/cookies');
 
 describe('Order API Integration Tests', () => {
     let customerId;
