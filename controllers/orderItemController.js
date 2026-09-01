@@ -1,6 +1,6 @@
 const orderItemService = require('../services/orderItemService');
 
-async function getItemsByOrderId(req, res){
+async function getItemsByOrderId(req, res, next){
     const orderId = req.params.orderId;
 
     try{
@@ -8,12 +8,11 @@ async function getItemsByOrderId(req, res){
         res.status(200).json(items);
     }
     catch(err){
-        console.error('Error in getItemsByOrderId controller:', err);
-        res.status(500).json({error: 'Internal Server error'});
+        next(err);
     }
 }
 
-async function addOrderItem(req, res){
+async function addOrderItem(req, res, next){
     const orderId = req.params.orderId;
     const orderItem = req.body;
 
@@ -29,12 +28,11 @@ async function addOrderItem(req, res){
         if(err.code === '23503'){
            return res.status(404).json({error: 'Order not found'});
         }
-        console.error('Error in addOrderItem controller:', err);
-        res.status(500).json({error: 'Internal Server error'});
+        next(err);
     }
 }
 
-async function updateItemQuantity(req, res){
+async function updateItemQuantity(req, res, next){
     const itemId = req.params.id;
     const quantity = req.body.quantity;
 
@@ -51,12 +49,11 @@ async function updateItemQuantity(req, res){
         }
     }
     catch(err){
-        console.error('Error in updateItemQuantity controller:', err);
-        res.status(500).json({error: 'Internal Server error'});
+        next(err);
     }
 }
 
-async function deleteOrderItem(req, res){
+async function deleteOrderItem(req, res, next){
     const itemId = req.params.id;
 
     try{
@@ -70,8 +67,7 @@ async function deleteOrderItem(req, res){
         }
     }
     catch(err){
-        console.error('Error in deleteOrderItem controller:', err);
-        res.status(500).json({error: 'Internal Server error'});
+        next(err);
     }
 }
 

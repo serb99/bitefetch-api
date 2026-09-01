@@ -1,17 +1,16 @@
 const customerService = require('../services/customerService');
 
-async function getAllCustomers(req, res){
+async function getAllCustomers(req, res, next){
     try{
         const customers = await customerService.getAllCustomers();
         res.status(200).json(customers);
     }
     catch(err){
-        console.error('Error in getAllCustomers controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });   
+        next(err);   
     }
 }
 
-async function getCustomerById(req, res){
+async function getCustomerById(req, res, next){
     const id = req.params.id;
 
     try{
@@ -24,12 +23,11 @@ async function getCustomerById(req, res){
         }
     }
     catch(err){
-        console.error('Error in getCustomerById controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function createCustomer(req, res){
+async function createCustomer(req, res, next){
     const customerData = req.body;
 
     if (!customerData.email || !customerData.first_name || !customerData.last_name || !customerData.phone) {
@@ -41,12 +39,11 @@ async function createCustomer(req, res){
         res.status(201).json(customer);
     }
     catch(err){
-        console.error('Error in createCustomer controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function updateCustomer(req, res){
+async function updateCustomer(req, res, next){
     const id = req.params.id;
     const customerData = req.body;
 
@@ -64,12 +61,11 @@ async function updateCustomer(req, res){
         }
     }
     catch(err){
-        console.error('Error in updateCustomer controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function deleteCustomer(req, res){
+async function deleteCustomer(req, res, next){
     const id = req.params.id;
 
     try{
@@ -88,8 +84,7 @@ async function deleteCustomer(req, res){
             res.status(409).json({ error: 'Cannot delete customer with existing orders' });
         }
         else{
-            console.error('Error in deleteCustomer controller:', err);
-            res.status(500).json({ error: 'Internal Server Error' });
+            next(err);
         }
     }
 }

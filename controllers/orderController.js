@@ -1,17 +1,16 @@
 const orderService = require('../services/orderService');
 
-async function getAllOrders(req, res){
+async function getAllOrders(req, res, next){
     try{
         const orders = await orderService.getAllOrders();
         res.status(200).json(orders);
     }
     catch(err){
-        console.error('Error in getAllOrders controller:', err);
-        res.status(500).json({error: 'Internal Server Error'});
+        next(err);
     }
 }
 
-async function getOrderById(req, res){
+async function getOrderById(req, res, next){
     const id = req.params.id;
 
     try{
@@ -24,12 +23,11 @@ async function getOrderById(req, res){
         }
     }
     catch(err){
-        console.error('Error in getOrderById controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function createOrder(req, res){
+async function createOrder(req, res, next){
     const orderData = req.body;
 
     if (!orderData.customer_id || !orderData.items || orderData.items.length === 0) {
@@ -49,12 +47,11 @@ async function createOrder(req, res){
         res.status(201).json(order);
     }
     catch(err){
-        console.error('Error in createOrder controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function updateOrder(req, res){
+async function updateOrder(req, res, next){
     const id = req.params.id;
     const orderStatus = req.body.status;
 
@@ -72,12 +69,11 @@ async function updateOrder(req, res){
         }
     }
     catch(err){
-        console.error('Error in updateOrder controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 
-async function deleteOrder(req, res){
+async function deleteOrder(req, res, next){
     const id = req.params.id;
 
     try{
@@ -90,8 +86,7 @@ async function deleteOrder(req, res){
         }
     }
     catch(err){
-        console.error('Error in deleteOrder controller:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 }
 

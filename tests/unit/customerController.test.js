@@ -22,8 +22,9 @@ describe('customerController.getCustomerById', () => {
 
         const req = { params: { id: '1' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.getCustomerById(req, res);
+        await customerController.getCustomerById(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(fakeCustomer);
@@ -35,8 +36,9 @@ describe('customerController.getCustomerById', () => {
 
         const req = { params: { id: '9999' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.getCustomerById(req, res);
+        await customerController.getCustomerById(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: 'Customer not found' });
@@ -47,11 +49,11 @@ describe('customerController.getCustomerById', () => {
 
         const req = { params: { id: '1' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.getCustomerById(req, res);
+        await customerController.getCustomerById(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+        expect(next).toHaveBeenCalledWith(new Error('Database error'));
     })
 })
 
@@ -75,8 +77,9 @@ describe('customerController.createCustomer', ()  => {
 
         const req = { body: newCustomerInput };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.createCustomer(req, res);
+        await customerController.createCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(createdCustomer);
@@ -93,8 +96,9 @@ describe('customerController.createCustomer', ()  => {
 
         const req = { body: newCustomerInput };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.createCustomer(req, res);
+        await customerController.createCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({ error: 'Missing required fields' });
@@ -113,11 +117,11 @@ describe('customerController.createCustomer', ()  => {
 
         const req = { body: newCustomerInput };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.createCustomer(req, res);
+        await customerController.createCustomer(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+        expect(next).toHaveBeenCalledWith(new Error('Database error'));
     })
 })
 
@@ -138,8 +142,9 @@ describe('customerController.updateCustomer', () => {
 
         const req = { params: { id: '1' }, body: { phone: '0799999999' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.updateCustomer(req, res);
+        await customerController.updateCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(updatedCustomer);
@@ -148,8 +153,9 @@ describe('customerController.updateCustomer', () => {
     test('should return 400 when no data is provided', async () => {
         const req = { params: { id: '1' }, body: {} };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.updateCustomer(req, res);
+        await customerController.updateCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({ error: 'No data provided for update' });
@@ -161,25 +167,28 @@ describe('customerController.updateCustomer', () => {
 
         const req = { params: { id: '9999' }, body: { phone: '0799999999' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.updateCustomer(req, res);
+        await customerController.updateCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: 'Customer not found' });
     });
 
     test('should return 500 when service throws an error', async () => {
-        customerService.updateCustomer.mockRejectedValue(new Error('Database error'));
+        const dbError = new Error('Database error');
+        customerService.updateCustomer.mockRejectedValue(dbError);
 
         const req = { params: { id: '1' }, body: { phone: '0799999999' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.updateCustomer(req, res);
+        await customerController.updateCustomer(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+        expect(next).toHaveBeenCalledWith(dbError);
+        expect(res.status).not.toHaveBeenCalled();
+        });
     });
-});
 
 describe('customerController.deleteCustomer', () => {
     test('should return 200 when succesfully deleted a customer', async () => {
@@ -189,8 +198,8 @@ describe('customerController.deleteCustomer', () => {
 
         const req = {params: {id: '1'}};
         const res = createMockRes();
-
-        await customerController.deleteCustomer(req, res);
+        const next = jest.fn();
+        await customerController.deleteCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(idDeletedCustomer);
@@ -201,23 +210,26 @@ describe('customerController.deleteCustomer', () => {
 
         const req = { params: { id: '9999' } };
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.deleteCustomer(req, res);
+        await customerController.deleteCustomer(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(404);
         expect(res.json).toHaveBeenCalledWith({ error: 'Customer not found' });
     });
 
     test('should return 500 when service throws an error', async () => {
-        customerService.deleteCustomer.mockRejectedValue(new Error('Database error'));
+        const dbError = new Error('Database error');
+        customerService.deleteCustomer.mockRejectedValue(dbError);
 
         const req = { params: { id: '1' }};
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.deleteCustomer(req, res);
+        await customerController.deleteCustomer(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+        expect(next).toHaveBeenCalledWith(dbError);
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('should return 409 when customer has existing orders', async() => {
@@ -227,9 +239,10 @@ describe('customerController.deleteCustomer', () => {
 
         const req = { params: { id: '1' }};
         const res = createMockRes();
+        const next = jest.fn();
 
-        await customerController.deleteCustomer(req, res);
-        
+        await customerController.deleteCustomer(req, res, next);
+
         expect(res.status).toHaveBeenCalledWith(409);
         expect(res.json).toHaveBeenCalledWith({ error: 'Cannot delete customer with existing orders' });
     })
