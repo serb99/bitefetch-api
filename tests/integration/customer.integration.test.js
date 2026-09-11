@@ -3,47 +3,13 @@ const request = require('supertest');
 const app = require('../../app');
 const pool = require('../../database/pool');
 
-describe('Customer API Integration Tests', () =>{
-    let customerIds = [];
+afterAll(async () => {
+    await pool.end();
+})
 
-    beforeEach(async () => {
-        const result = await pool.query(
-            `INSERT INTO customers (first_name, last_name, email, phone, destination_address) VALUES
-             ('Test', 'One', 'test.one@example.com', '0700000001', 'Test Address 1'),
-             ('Test', 'Two', 'test.two@example.com', '0700000002', 'Test Address 2'),
-             ('Test', 'Three', 'test.three@example.com', '0700000003', 'Test Address 3')
-             RETURNING *`
-        );
-        customerIds = result.rows.map(row => row.id);
-    })
-
+describe('Customer API Integration Tests - Create Customer (no auth required)', () => {
     afterEach(async () => {
         await pool.query('DELETE FROM customers');
-    })
-
-    afterAll(async () => {
-        await pool.end();
-    })
-
-    test('GET /customers returns 200 and an array', async () => {
-        const response = await request(app).get('/customers');
-
-        expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
-    })
-
-    test('GET /customers/:id returns 200 and the correct customer', async () => {
-        const response = await request(app).get(`/customers/${customerIds[0]}`);
-
-        expect(response.status).toBe(200);
-        expect(response.body).toMatchObject({
-            id: customerIds[0],
-            first_name: 'Test',
-            last_name: 'One',
-            email: 'test.one@example.com',
-            phone: '0700000001',
-            destination_address: 'Test Address 1'
-        });
     })
 
     test('POST /customers creates a new customer and returns 201', async () =>{
@@ -52,36 +18,12 @@ describe('Customer API Integration Tests', () =>{
             last_name: 'Four',
             email: 'test.four@example.com',
             phone: '0700000004',
-            destination_address: 'Test Address 4'
+            destination_address: 'Test Address 4',
+            password: 'Pass123'
         });
 
         expect(response.status).toBe(201);
         expect(response.body.first_name).toBe('Test');
-    })
-
-    test('PATCH /customers/:id updates a customer and returns 200', async () => {
-        const response = await request(app).patch(`/customers/${customerIds[2]}`).send({
-            first_name: 'Test',
-            last_name: 'Updated',
-            email: 'test.update@example.com'
-        });
-
-        expect(response.status).toBe(200);
-        expect(response.body.last_name).toBe('Updated');
-    })
-
-    test('DELETE /customers/:id deletes a customer and return 200', async () => {
-        const response = await request(app).delete(`/customers/${customerIds[1]}`);
-
-        expect(response.status).toBe(200);
-        expect(response.body.id).toBe(customerIds[1]);
-    })
-
-    test('GET /customers/id returns 404 for non-existent customer', async () => {
-        const response = await request(app).get('/customers/9999');
-
-        expect(response.status).toBe(404);
-        expect(response.body.error).toBe('Customer not found');
     })
 
     test('POST /customers returns 400 for missing required fields', async () => {
@@ -93,16 +35,91 @@ describe('Customer API Integration Tests', () =>{
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Missing required fields');
     })
+})
+
+describe('Customer API Integration Tests', () =>{
+    let customerId;
+    let agent;
+
+    beforeEach(async () => {
+        agent = request.agent(app);
+
+        const result = await agent.post('/customers').send({ 
+            first_name: 'Test', 
+            last_name: 'Customer', 
+            email: 'test.one@example.com', 
+            phone: '0700000001', 
+            destination_address: 'Test Address 1', 
+            password: 'Pass123' }
+        );
+
+        customerId = result.body.id;
+
+        await agent.post('/auth/login').send({
+            email: 'test.one@example.com',
+            password: 'Pass123'
+        });
+    })
+
+    afterEach(async () => {
+        await pool.query('DELETE FROM customers');
+    })
+
+    test('GET /customers returns 200 and an array', async () => {
+        const response = await agent.get('/customers');
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+    })
+
+    test('GET /customers/:id returns 200 and the correct customer', async () => {
+        const response = await agent.get(`/customers/${customerId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({
+            id: customerId,
+            first_name: 'Test',
+            last_name: 'Customer',
+            email: 'test.one@example.com',
+            phone: '0700000001',
+            destination_address: 'Test Address 1'
+        });
+    })
+
+    test('PATCH /customers/:id updates a customer and returns 200', async () => {
+        const response = await agent.patch(`/customers/${customerId}`).send({
+            first_name: 'Test',
+            last_name: 'Updated',
+            email: 'test.update@example.com'
+        });
+
+        expect(response.status).toBe(200);
+        expect(response.body.last_name).toBe('Updated');
+    })
+
+    test('DELETE /customers/:id deletes a customer and return 200', async () => {
+        const response = await agent.delete(`/customers/${customerId}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body.id).toBe(customerId);
+    })
+
+    test('GET /customers/id returns 404 for non-existent customer', async () => {
+        const response = await agent.get('/customers/9999');
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Customer not found');
+    })
 
     test('PATCH /customers/:id returns 400 for no data provided', async () => {
-        const response = await request(app).patch(`/customers/${customerIds[0]}`).send({});
+        const response = await agent.patch(`/customers/${customerId}`).send({});
 
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('No data provided for update');
     })
 
     test('PATCH /customers/:id returns 404 for non-existent customer', async () => {
-        const response = await request(app).patch('/customers/9999').send({
+        const response = await agent.patch('/customers/9999').send({
             first_name: 'Test',
             last_name: 'Updated',
             phone: '0700000005'

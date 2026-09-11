@@ -6,16 +6,25 @@ const pool = require('../../database/pool');
 describe('Order API Integration Tests', () => {
     let customerId;
     let orderIds = [];
+    let agent;
 
     beforeEach(async () => {
+        agent = request.agent(app); // Create a new agent for each test to maintain session state
         //1. seed a customer first, since orders need a valid customer id
-        const customerResult = await pool.query(
-            `INSERT INTO customers (first_name, last_name, email, phone, destination_address)
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-             ['Test', 'Customer', 'test.customer@example.com', '0700000000', 'Test Address']
+        const customerResult = await agent.post('/customers').send({
+            first_name: 'Test', 
+            last_name: 'Customer', 
+            email: 'test.customer@example.com',
+            phone: '0700000000', 
+            destination_address: 'Test Address',
+            password: 'TestPass123'
+            }
         );
-        customerId = customerResult.rows[0].id;
-
+        customerId = customerResult.body.id;
+        await agent.post('/auth/login').send({
+            email: 'test.customer@example.com',
+            password: 'TestPass123'
+        });
         //2. seed a few orders for that customer
         const ordersResult = await pool.query(
             `INSERT INTO orders (customer_id, status, total) VALUES
@@ -48,14 +57,14 @@ describe('Order API Integration Tests', () => {
     });
 
     test('GET /orders returns and an array', async () => {
-        const response = await request(app).get('/orders');
+        const response = await agent.get('/orders');
 
         expect(response.status).toBe(200);
         expect(Array.isArray(response.body)).toBe(true);
     })
 
     test('GET /orders/:id returns 200 and the correct order', async() =>{
-        const response = await request(app).get(`/orders/${orderIds[0]}`);
+        const response = await agent.get(`/orders/${orderIds[0]}`);
         
         expect(response.status).toBe(200);
         expect(response.body).toMatchObject({
@@ -66,7 +75,7 @@ describe('Order API Integration Tests', () => {
     })
 
     test('POST /orders creates a new order with order items and returns 201', async() => {
-        const response = await request(app).post('/orders').send({
+        const response = await agent.post('/orders').send({
             customer_id: customerId,
             items: [{
               item_name: 'test_item',
@@ -82,7 +91,7 @@ describe('Order API Integration Tests', () => {
     })
 
     test('PATCH /orders/:id updates the status',async () => {
-        const response = await request(app)
+        const response = await agent
             .patch(`/orders/${orderIds[0]}`)
             .send({status: 'preparing'});
 
@@ -92,7 +101,7 @@ describe('Order API Integration Tests', () => {
     })
 
     test('PATCH /orders/:id sets delivered_at automatically when status becomes delivered', async () => {
-        const response = await request(app)
+        const response = await agent
             .patch(`/orders/${orderIds[0]}`)
             .send({ status: 'delivered' });
 
@@ -102,7 +111,7 @@ describe('Order API Integration Tests', () => {
     })
 
     test('PATCH /orders/:id returns 400 when no data is provided', async () => {
-        const response = await request(app)
+        const response = await agent
             .patch(`/orders/${orderIds[0]}`)
             .send({});
 
@@ -110,7 +119,7 @@ describe('Order API Integration Tests', () => {
     });
 
     test('PATCH /orders/:id returns 404 for a nonexistent order', async () => {
-        const response = await request(app)
+        const response = await agent
             .patch('/orders/999999')
             .send({ status: 'preparing' });
 
@@ -118,7 +127,7 @@ describe('Order API Integration Tests', () => {
     });
 
     test('DELETE /orders/:id deletes the order and its items', async () => {
-        const response = await request(app).delete(`/orders/${orderIds[0]}`);
+        const response = await agent.delete(`/orders/${orderIds[0]}`);
 
         expect(response.status).toBe(200);
         expect(response.body.id).toBe(orderIds[0]);
@@ -131,19 +140,19 @@ describe('Order API Integration Tests', () => {
     });
 
     test('DELETE /orders/:id returns 404 for a nonexistent order', async () => {
-        const response = await request(app).delete('/orders/999999');
+        const response = await agent.delete('/orders/999999');
 
         expect(response.status).toBe(404);
     });
 
     test('GET /orders/:id returns 404 for a nonexistent order', async () => {
-        const response = await request(app).get('/orders/999999');
+        const response = await agent.get('/orders/999999');
 
         expect(response.status).toBe(404);
     });
 
     test('POST /orders returns 400 when customer_id is missing', async () => {
-        const response = await request(app).post('/orders').send({
+        const response = await agent.post('/orders').send({
             items: [{ item_name: 'test_item', unit_price: '11.10', quantity: '2' }]
         });
 
@@ -151,7 +160,7 @@ describe('Order API Integration Tests', () => {
     });
 
     test('POST /orders returns 400 when items array is missing', async () => {
-        const response = await request(app).post('/orders').send({
+        const response = await agent.post('/orders').send({
             customer_id: customerId
         });
 
@@ -159,7 +168,7 @@ describe('Order API Integration Tests', () => {
     });
 
     test('POST /orders returns 400 when an item is missing a required field', async () => {
-        const response = await request(app).post('/orders').send({
+        const response = await agent.post('/orders').send({
             customer_id: customerId,
             items: [{ item_name: 'test_item', unit_price: '11.10' }]  // missing quantity
         });

@@ -89,4 +89,4 @@ async function deleteCustomer(req, res, next){
     }
 }
 
-module.exports = { getAllCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer };
+module.exports = { getAllCustomers, getCustomerById, createCustomer, updateCustomer, deleteCustomer};
