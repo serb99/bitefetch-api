@@ -37,4 +37,14 @@ async function logoutCustomer(req, res, next){
     })
 }
 
-module.exports = { loginCustomer, logoutCustomer };
+async function getCurrentCustomer(req, res, next){
+    try{
+        const customer = await customerService.getCustomerById(req.session.customerId);
+        res.status(200).json(customer);
+    }
+    catch(err){
+        next(err);
+    }
+}
+
+module.exports = { loginCustomer, logoutCustomer, getCurrentCustomer };
