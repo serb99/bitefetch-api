@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 3000
 
 #The command runc will exec()
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]

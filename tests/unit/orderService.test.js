@@ -1,7 +1,7 @@
-const pool = require('../../database/pool');
-const orderService = require('../../services/orderService');
+const pool = require('../../src/database/pool');
+const orderService = require('../../src/services/orderService');
 
-jest.mock('../../database/pool');
+jest.mock('../../src/database/pool');
 
 describe('orderService.updateOrder', () => {
     test('sets delivered_at when status is delivered', async () =>{

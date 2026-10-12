@@ -2,9 +2,9 @@
   "name": "bitefetch-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "migrate:create": "node-pg-migrate create --config-file ./config/migrate.config.js",

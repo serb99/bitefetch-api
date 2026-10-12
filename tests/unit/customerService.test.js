@@ -1,7 +1,7 @@
-const customerService = require('../../services/customerService');
-const pool = require('../../database/pool');
+const customerService = require('../../src/services/customerService');
+const pool = require('../../src/database/pool');
 
-jest.mock('../../database/pool');
+jest.mock('../../src/database/pool');
 
 describe('updateCustomer service unit tests', () => {
   test('Assert the update query is build correctly for a single-field update', async () => {

@@ -1,7 +1,7 @@
-const customerService = require('../../services/customerService');
-const customerController = require('../../controllers/customerController');
+const customerService = require('../../src/services/customerService');
+const customerController = require('../../src/controllers/customerController');
 
-jest.mock('../../services/customerService');
+jest.mock('../../src/services/customerService');
 
 function createMockRes(){
     return {

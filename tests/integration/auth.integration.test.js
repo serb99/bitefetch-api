@@ -1,7 +1,7 @@
 require('dotenv').config();
 const request = require('supertest');
-const app = require('../../app');
-const pool = require('../../database/pool');
+const app = require('../../src/app');
+const pool = require('../../src/database/pool');
 
 describe('Auth Integration Tests', () => {
     const testEmail = 'auth.test@example.com';
