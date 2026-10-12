@@ -4,8 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/index.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "migrate:create": "node-pg-migrate create --config-file ./config/migrate.config.js",
+    "migrate:up": "node-pg-migrate up --config-file ./config/migrate.config.js",
+    "migrate:down": "node-pg-migrate down --config-file ./config/migrate.config.js",
+    "migrate:redo": "node-pg-migrate redo --config-file ./config/migrate.config.js",
+    "migrate:test:up": "node-pg-migrate up --config-file ./config/migrate.test.config.js",
+    "migrate:test:down": "node-pg-migrate down --config-file ./config/migrate.test.config.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +27,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
-    "pg": "^8.23.0"
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.23.1"
   }
 }
