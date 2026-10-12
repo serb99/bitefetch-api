@@ -1,7 +1,7 @@
 /**
  * Migration 5: customer side.
  * Tables: delivery_addresses, carts, cart_items.
- * Source of truth: database/schema.dbml (group "customer_side").
+ * Source of truth: docs/design/database/schema.dbml (group "customer_side").
  */
 
 exports.shorthands = undefined;

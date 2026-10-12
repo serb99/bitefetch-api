@@ -8,7 +8,7 @@
  * makes them a no-op): users_email_lower_uq, orders_order_code_uq, orders_customer_idempotency_uq,
  * order_offers_once_per_round_uq. The down migration does not touch those.
  *
- * Source of truth: database/constraints.sql.
+ * Source of truth: docs/design/database/constraints.sql.
  */
 
 exports.shorthands = undefined;
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS refresh_tokens_live_user_idx
 CREATE INDEX IF NOT EXISTS refresh_tokens_expires_idx ON refresh_tokens (expires_at);
 
 -- "restaurants near an address": bounding-box filter on plain lat/lng
--- (see docs/schema-notes.md §6 for the PostGIS upgrade path)
+-- (see docs/design/notes/schema-notes.md §6 for the PostGIS upgrade path)
 CREATE INDEX IF NOT EXISTS restaurants_lat_lng_idx ON restaurants (lat, lng);
 
 -- one default address per user ("Set default address")

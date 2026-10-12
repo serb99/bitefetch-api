@@ -8,7 +8,7 @@
  * The history triggers read the actor and the reason from the transaction:
  *   SET LOCAL app.actor = 'courier:88'; SET LOCAL app.reason = '...';
  *
- * Source of truth: database/constraints.sql.
+ * Source of truth: docs/design/database/constraints.sql.
  */
 
 exports.shorthands = undefined;
@@ -83,7 +83,7 @@ BEGIN
 END $$;
 
 -- §9.2 orders: allowed status transitions ---------------------------------------
--- Mirrors docs/order-state-machine.md §2.1. Anything else raises check_violation (23514 -> HTTP 409).
+-- Mirrors docs/design/notes/order-state-machine.md §2.1. Anything else raises check_violation (23514 -> HTTP 409).
 CREATE OR REPLACE FUNCTION check_order_transition() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN

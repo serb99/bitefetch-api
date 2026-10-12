@@ -1,7 +1,7 @@
 /**
  * Migration 3: catalog.
  * Tables: brands, restaurants, menu_items, restaurant_item_availability, osm_search_cache.
- * Source of truth: database/schema.dbml (group "catalog").
+ * Source of truth: docs/design/database/schema.dbml (group "catalog").
 */
 
 exports.shorthands = undefined;

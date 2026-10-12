@@ -1,0 +1,998 @@
+// BiteFetch – database schema (PostgreSQL 14+)
+// This file is the single source of truth for the schema.
+// CHECK constraints, special indexes, partial uniques, triggers and partitioning live in docs/design/database/constraints.sql
+// (section numbers are referenced as "constraints.sql §n").
+// Conventions: snake_case, bigint identity keys, timestamptz, Postgres enums, money in integer minor units (cents).
+// Enum values are lowercase; docs/design/notes/order-state-machine.md writes them in UPPERCASE (PENDING_PAYMENT = pending_payment).
+
+// Project notes:
+//  29 tables in 6 groups. Load target: 10k orders/day, several stateless API instances,
+//  separate worker service, Redis for socket.io and caching only (never the source of truth).
+//  Lock order everywhere: users -> orders -> order_offers.
+
+//////////////////////////////////////////////////////////////////////////////
+// Enums
+//////////////////////////////////////////////////////////////////////////////
+
+Enum user_role {
+  customer
+  restaurant_owner
+  courier
+  admin
+}
+Enum user_status {
+  pending_activation
+  pending_approval
+  active
+  suspended
+  rejected
+  deleted
+}
+Enum application_status {
+  pending
+  approved
+  rejected
+}
+Enum email_token_type {
+  activation
+  password_reset
+}
+Enum vehicle_type {
+  bike
+  scooter
+  car
+}
+Enum courier_availability {
+  online
+  offline
+}
+Enum courier_offline_reason {
+  manual
+  missed_offers
+  no_position
+  suspended
+}
+Enum brand_kind {
+  chain
+  private
+}
+
+Enum order_status {
+  pending_payment
+  placed
+  accepted
+  ready_for_pickup
+  picked_up
+  delivered [note: 'terminal']
+  cancelled [note: 'terminal']
+  rejected [note: 'terminal']
+  expired [note: 'terminal']
+}
+Enum dispatch_state {
+  not_started
+  searching
+  no_courier
+  assigned
+}
+Enum payment_status {
+  pending
+  authorized
+  voided
+  captured
+  capture_failed
+}
+Enum cancel_actor {
+  customer
+  restaurant
+  admin
+  system
+}
+Enum offer_status {
+  pending
+  accepted
+  declined
+  expired
+  withdrawn
+}
+Enum offer_decline_reason {
+  too_far
+  busy
+  vehicle_unsuitable
+  other
+  went_offline
+}
+Enum cancel_request_status {
+  pending
+  approved
+  rejected
+  superseded
+}
+Enum incident_type {
+  no_courier
+  capture_failed
+  restaurant_unresponsive
+  kitchen_late
+  courier_problem
+  delivery_overdue
+}
+Enum courier_problem_category {
+  customer_unreachable
+  wrong_or_missing_items
+  vehicle_issue
+  restaurant_closed
+  other
+}
+Enum incident_opener {
+  system
+  courier
+  customer
+  restaurant
+  admin
+}
+Enum conversation_type {
+  order
+  support
+}
+Enum conversation_status {
+  open
+  resolved
+  closed
+}
+Enum message_kind {
+  text
+  system
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 1. Identity
+//////////////////////////////////////////////////////////////////////////////
+
+Table users {
+  id bigint [pk, increment]
+  email varchar(254) [not null, note: 'unique on lower(email); A10 rewrites it to deleted+{id}@invalid']
+  email_verified_at timestamptz [note: 'set by A2 / A3']
+  password_hash varchar(255) [not null]
+  role user_role [not null, note: 'from the signup route, never from the body; admin is seeded']
+  status user_status [not null, default: 'pending_activation']
+  status_reason varchar(500) [note: 'last suspension / rejection reason shown in the admin UI']
+  full_name varchar(200) [not null]
+  phone varchar(32)
+  token_version int [not null, default: 0, note: 'bumped on password reset; checked on refresh']
+  version int [not null, default: 0, note: 'optimistic lock for admin actions (A5, A6, A8, A9, A11)']
+  last_login_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz [note: 'PII anonymized, orders kept (A10, A11)']
+
+  indexes {
+    `lower(email)` [unique, name: 'users_email_lower_uq']
+    (role, status) [name: 'users_role_status_idx']
+  }
+  Note: '''
+  Purpose: one row per person (customer, restaurant owner, courier, admin) with role and account status.
+  Writers: API (signup, activation, admin actions, profile edits); sweeper (A4 purge); trigger writes account_status_history.
+  Growth at 10k orders/day: ~1k new rows/day (assumed), ~0.4M after a year.
+  Retention: kept; deletion is a soft delete with anonymization. Never-activated rows are purged after 7 days (A4).
+  Special SQL: constraints.sql §1 (unique lower(email)), §9 (updated_at, status history trigger).
+  CHECK constraints: constraints.sql §13 (users_deleted_consistent, users_approval_roles, users_counters_non_negative).
+  '''
+}
+
+Table courier_profiles {
+  user_id bigint [pk]
+  vehicle_type vehicle_type [not null]
+  availability courier_availability [not null, default: 'offline']
+  offline_reason courier_offline_reason [default: 'manual', note: 'null while online']
+  consecutive_missed_offers int [not null, default: 0, note: 'reset by any answer; 2 in a row -> offline (missed_offers)']
+  went_online_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: courier-only data; created on approval (A5) from the application.
+  Writers: API (go online/offline, accept/decline), workers (S4 missed offers, no-position sweeper, A8 suspend).
+  Growth: one row per approved courier (hundreds to low thousands).
+  Retention: kept with the user.
+  Special SQL: constraints.sql §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (courier_profiles_offline_reason, courier_profiles_missed_non_negative).
+  '''
+}
+
+Table applications {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  role user_role [not null]
+  status application_status [not null, default: 'pending']
+  details jsonb [not null, note: 'courier: vehicle, contact; owner: restaurant details as entered']
+  restaurant_id bigint [note: 'owner: the OSM restaurant they picked; the admin confirms it on approval (D1)']
+  attempt_no int [not null, default: 1, note: 'max 3 (account Q2)']
+  reject_reason varchar(500)
+  decided_by bigint
+  decided_at timestamptz
+  version int [not null, default: 0, note: 'optimistic lock for approve / reject']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id) [name: 'applications_user_idx']
+    (status, created_at) [name: 'applications_queue_idx']
+  }
+  Note: '''
+  Purpose: owner and courier applications; a new row per (re)application (A1, A7).
+  Writers: API (signup, reapply, admin approve / reject).
+  Growth: ~tens per day.
+  Retention: kept (audit of who approved whom).
+  Special SQL: constraints.sql §1 (one pending application per user), §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (applications_role, applications_attempts, applications_decided_consistent, applications_reject_reason, applications_restaurant_owner_only).
+  '''
+}
+
+Table email_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  type email_token_type [not null]
+  token_hash varchar(64) [not null, unique, note: 'SHA-256 hex of the emailed token; the token itself is never stored']
+  expires_at timestamptz [not null, note: 'activation 24 h, password reset 1 h']
+  used_at timestamptz
+  revoked_at timestamptz [note: 'older tokens are invalidated when a new one is sent (N7)']
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: one-time activation and password-reset tokens.
+  Writers: API (signup, resend, forgot password, activate, reset).
+  Growth: ~1-2k/day.
+  Retention: deleted 30 days after expiry (assumed).
+  Special SQL: constraints.sql §1 (active-token index, purge index).
+  CHECK constraints: constraints.sql §13 (email_tokens_expiry_after_creation).
+  '''
+}
+
+Table refresh_tokens {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  token_hash varchar(64) [not null, unique]
+  family_id uuid [not null, note: 'all rotations of one login share it; reuse of a rotated token revokes the family']
+  replaced_by_id bigint [note: 'set on rotation']
+  expires_at timestamptz [not null, note: '30 days after issue (assumed)']
+  revoked_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (family_id) [name: 'refresh_tokens_family_idx']
+  }
+  Note: '''
+  Purpose: rotating refresh tokens for 15-min JWT access tokens (account Q4).
+  Writers: API (login, refresh, logout, password reset, A8 / A10 / A11 revocation).
+  Growth: one row per refresh; ~100k/day at 20k daily active users (assumed).
+  Retention: purged 30 days after expiry (R12).
+  Special SQL: constraints.sql §1 (active tokens per user, purge index).
+  '''
+}
+
+Table account_status_history {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  from_status user_status
+  to_status user_status [not null]
+  actor varchar(64) [not null, note: "from SET LOCAL app.actor, e.g. 'admin:42', 'system:sweeper'"]
+  reason varchar(500) [note: 'from SET LOCAL app.reason']
+  at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, at) [name: 'account_status_history_user_idx']
+  }
+  Note: '''
+  Purpose: audit of every users.status change (A1-A11).
+  Writers: trigger only (constraints.sql §9).
+  Growth: ~2-3 rows per new user.
+  Retention: kept with the user (low volume).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 2. Catalog
+//////////////////////////////////////////////////////////////////////////////
+
+Table brands {
+  id bigint [pk, increment]
+  name varchar(200) [not null]
+  kind brand_kind [not null, note: 'chain = admin-managed; private = one-restaurant brand edited by its owner (D1)']
+  osm_brand_tag varchar(200) [unique, note: 'matches the OSM brand tag; null for private brands']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: menu owner. Every restaurant belongs to a brand; menu_items belong to the brand.
+  Writers: API (admin for chains; owner for their private brand; A5 creates a private brand for an independent).
+  Growth: low (hundreds to thousands).
+  Retention: kept.
+  Special SQL: constraints.sql §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (brands_private_no_osm_tag).
+  '''
+}
+
+Table restaurants {
+  id bigint [pk, increment]
+  brand_id bigint [not null]
+  owner_id bigint [unique, note: 'one restaurant per owner; null = OSM place not claimed']
+  osm_id varchar(40) [unique, note: "e.g. 'node/123456'"]
+  name varchar(200) [not null]
+  address varchar(300)
+  lat float8 [not null]
+  lng float8 [not null]
+  phone varchar(32)
+  opening_hours jsonb [note: 'weekly schedule {mon: [["10:00","22:00"]], ...} in Europe/Bucharest; null = not orderable; required once owned (A5)']
+  is_open boolean [not null, default: true, note: 'owner open / closed switch']
+  paused_until timestamptz [note: 'owner pause, or auto-pause after 2 accept timeouts (flow 1)']
+  consecutive_timeouts int [not null, default: 0]
+  osm_synced_at timestamptz
+  version int [not null, default: 0, note: 'optimistic lock for admin unpause / edits']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (brand_id) [name: 'restaurants_brand_idx']
+  }
+  Note: '''
+  Purpose: places that take orders; OSM places are imported here and claimed by an owner on approval.
+  Writers: API (owner info, open/closed, pause; admin unpause and approval), worker (T8 auto-pause), OSM import.
+  Growth: low (a few thousand per city).
+  Retention: kept.
+  Special SQL: constraints.sql §2 (bounding-box index), §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (restaurants_coordinates, restaurants_timeouts_non_negative, restaurants_owned_have_hours).
+  '''
+}
+
+Table menu_items {
+  id bigint [pk, increment]
+  brand_id bigint [not null]
+  name varchar(200) [not null]
+  description text
+  price_minor int [not null, note: 'euro cents']
+  currency char(3) [not null, default: 'EUR']
+  category varchar(100)
+  sort_order int [not null, default: 0]
+  image_url varchar(1000) [note: 'Unsplash URL']
+  is_active boolean [not null, default: true, note: 'soft delete; order_items keep their own snapshot']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (brand_id, is_active, category, sort_order) [name: 'menu_items_menu_idx']
+  }
+  Note: '''
+  Purpose: brand-level menu.
+  Writers: API (admin for chain brands; owner for their private brand).
+  Growth: low (tens to hundreds per brand).
+  Retention: kept; never hard-deleted while referenced.
+  Special SQL: constraints.sql §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (menu_items_price_non_negative, menu_items_currency_format).
+  '''
+}
+
+Table restaurant_item_availability {
+  restaurant_id bigint [not null]
+  menu_item_id bigint [not null]
+  available boolean [not null, note: 'a missing row means available']
+  updated_by bigint
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (restaurant_id, menu_item_id) [pk]
+    (menu_item_id) [name: 'restaurant_item_availability_item_idx']
+  }
+  Note: '''
+  Purpose: per-restaurant availability overrides (D1). Also written by T7 when the owner ticks out-of-stock items.
+  Writers: API (owner, admin).
+  Growth: only overrides; low.
+  Retention: kept.
+  Special SQL: constraints.sql §2 (trigger: the item must belong to the restaurant's brand), §9 (updated_at).
+  '''
+}
+
+Table osm_search_cache {
+  id bigint [pk, increment]
+  query_key varchar(200) [not null, unique, note: 'normalized query: kind + text + rounded bbox']
+  query jsonb [not null]
+  results jsonb [not null]
+  fetched_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null]
+
+  indexes {
+    (expires_at) [name: 'osm_search_cache_expiry_idx']
+  }
+  Note: '''
+  Purpose: cached OpenStreetMap search results (signup OSM match, restaurant search near an address).
+  Writers: API.
+  Growth: hundreds/day.
+  Retention: expires after 30 days, then deleted (assumed).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 3. Customer side
+//////////////////////////////////////////////////////////////////////////////
+
+Table delivery_addresses {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  label varchar(50)
+  street varchar(300) [not null]
+  details varchar(300) [note: 'apartment, floor, intercom']
+  city varchar(100) [not null]
+  lat float8 [not null]
+  lng float8 [not null]
+  is_default boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id) [name: 'delivery_addresses_user_idx']
+  }
+  Note: '''
+  Purpose: saved customer addresses. Orders keep their own snapshot, so rows can be hard-deleted.
+  Writers: API (customer).
+  Growth: ~1-2 per customer.
+  Retention: deleted by the customer, or with anonymization (A10).
+  Special SQL: constraints.sql §3 (one default per user), §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (delivery_addresses_coordinates).
+  '''
+}
+
+Table carts {
+  id bigint [pk, increment]
+  customer_id bigint [not null, unique, note: 'one server-side cart per customer']
+  restaurant_id bigint [note: 'set by the first item; one restaurant per order']
+  delivery_address_id bigint [note: 'the selected active delivery address']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: server-side cart; restored from order_items after a reject / cancel / expiry.
+  Writers: API (customer; T1 empties it on order creation, restore paths refill it).
+  Growth: one row per customer who ever added an item.
+  Retention: carts untouched for 30 days are emptied (assumed).
+  Special SQL: constraints.sql §3 (stale-cart index), §9 (updated_at).
+  '''
+}
+
+Table cart_items {
+  id bigint [pk, increment]
+  cart_id bigint [not null]
+  menu_item_id bigint [not null]
+  quantity int [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (cart_id, menu_item_id) [unique, name: 'cart_items_cart_item_uq']
+    (menu_item_id) [name: 'cart_items_item_idx']
+  }
+  Note: '''
+  Purpose: cart lines; no prices stored (totals are always recomputed on the server, R1).
+  Writers: API (customer).
+  Growth: churns; a few lines per active cart.
+  Retention: removed with the cart or by the customer.
+  Special SQL: constraints.sql §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (cart_items_quantity).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 4. Orders and dispatch
+//////////////////////////////////////////////////////////////////////////////
+
+Table orders {
+  id bigint [pk, increment]
+  order_code varchar(8) [not null, note: "display code 'BF-XXXXX' (R11); unique"]
+  customer_id bigint [not null]
+  restaurant_id bigint [not null]
+  courier_id bigint [note: 'set by S5; cleared when released before pickup']
+  delivery_address_id bigint [note: 'reference only; the snapshot is authoritative']
+  idempotency_key varchar(100) [not null, note: 'Idempotency-Key header; unique per customer']
+  status order_status [not null, default: 'pending_payment']
+  version int [not null, default: 0, note: 'incremented by every UPDATE; optimistic lock and socket event ordering']
+
+  // money (R1, R2)
+  subtotal_minor int [not null]
+  delivery_fee_minor int [not null]
+  total_minor int [not null]
+  currency char(3) [not null, default: 'EUR']
+  delivery_distance_m int [not null, note: 'OSRM route distance at checkout; drives the delivery fee']
+  delivery_address_snapshot jsonb [not null, note: 'label, street, details, city, lat, lng at checkout']
+  delivery_lat float8 [not null]
+  delivery_lng float8 [not null]
+
+  // payment (T1-T5, flow 6)
+  payment_status payment_status [not null, default: 'pending']
+  stripe_payment_intent_id varchar(64) [unique, note: 'one PaymentIntent per order for its whole life']
+  payment_expires_at timestamptz [not null, note: 'T1 + payment window (15 min)']
+  payment_attempts int [not null, default: 0]
+  last_payment_error varchar(200)
+  capture_attempts int [not null, default: 0]
+
+  // restaurant (T3, T6-T11)
+  placed_at timestamptz
+  accept_deadline timestamptz [note: 'T3 + accept window (5 min)']
+  accepted_at timestamptz
+  prep_minutes int [note: '10-60 in 5-min steps (R3)']
+  estimated_ready_at timestamptz [note: 'accepted_at + prep (R3)']
+  ready_at timestamptz
+
+  // dispatch (S1-S9)
+  dispatch_state dispatch_state [not null, default: 'not_started']
+  dispatch_round int [not null, default: 0, note: '0 before S1']
+  dispatch_after timestamptz [note: 'max(accepted_at, estimated_ready_at - 10 min) (R3)']
+  dispatch_started_at timestamptz
+  dispatch_deadline timestamptz [note: 'S1 / S7 + 15 min']
+  next_search_at timestamptz [note: 'backoff 2 -> 5 -> 10 -> 30 s when no candidate']
+
+  // delivery (T12, T13)
+  picked_up_at timestamptz
+  estimated_delivery_at timestamptz
+  delivered_at timestamptz
+
+  // end of life
+  ended_at timestamptz [note: 'set when a terminal status is reached; C5 closes order chats 24 h later']
+  cancelled_by cancel_actor
+  cancel_reason varchar(50) [note: 'reason code, e.g. out_of_stock, restaurant_timeout, no_courier, too_many_attempts']
+  cancel_note varchar(500)
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    order_code [unique, name: 'orders_order_code_uq']
+    (customer_id, idempotency_key) [unique, name: 'orders_customer_idempotency_uq']
+    (customer_id, created_at) [name: 'orders_customer_history_idx']
+    (restaurant_id, created_at) [name: 'orders_restaurant_history_idx']
+    (status, created_at) [name: 'orders_status_created_idx']
+  }
+  Note: '''
+  Purpose: one row per order; status, dispatch_state and payment_status are three parallel state machines (docs/design/notes/order-state-machine.md).
+  Writers: API (T1, T5-T7, T9-T18, S3, S5, S7, S8), workers (T2-T4 webhooks and sweepers, T8, S1, S2, S4, S6, S9, capture retries).
+  Growth: 10k rows/day, ~3.7M/year; hot set = non-terminal orders only (partial indexes).
+  Retention: kept (financial record); never deleted, never cascaded.
+  Special SQL: constraints.sql §4 (active-courier unique, sweeper and active-order partial indexes), §9 (transition guard, status history, updated_at).
+  CHECK constraints: constraints.sql §13 (orders_total_sum, orders_amounts_non_negative, orders_currency_format, orders_attempts, orders_dispatch_round, orders_prep_minutes, orders_no_courier_before_accept, orders_placed_fields, orders_accepted_fields, orders_ready_fields, orders_pickup_fields, orders_delivered_fields, orders_ended_at, orders_cancelled_by, orders_assignment_consistent, orders_dispatch_started_fields, orders_authorized_while_active, orders_capture_only_delivered).
+  '''
+}
+
+Table order_items {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  menu_item_id bigint [note: 'null if the menu item was ever hard-deleted; used to rebuild the cart (U9)']
+  name varchar(200) [not null, note: 'snapshot']
+  unit_price_minor int [not null, note: 'snapshot, euro cents']
+  quantity int [not null]
+  line_total_minor int [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (order_id) [name: 'order_items_order_idx']
+  }
+  Note: '''
+  Purpose: immutable order lines with name and price snapshots (receipts, cart restore).
+  Writers: API (T1 only).
+  Growth: ~3 per order -> ~30k/day, ~11M/year.
+  Retention: kept with the order.
+  CHECK constraints: constraints.sql §13 (order_items_price_non_negative, order_items_quantity, order_items_line_total).
+  '''
+}
+
+Table order_status_history {
+  id bigint [increment]
+  order_id bigint [not null]
+  from_status order_status [note: 'null for the INSERT row']
+  to_status order_status [not null]
+  version int [not null]
+  actor varchar(64) [not null, note: 'SET LOCAL app.actor']
+  reason varchar(500) [note: 'SET LOCAL app.reason']
+  at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (id, at) [pk]
+    (order_id, at) [name: 'order_status_history_order_idx']
+  }
+  Note: '''
+  Purpose: audit of every orders.status change.
+  Writers: trigger only (constraints.sql §9).
+  Growth: ~6 per order -> ~60k/day, ~22M/year.
+  Retention: monthly partitions on "at", kept 12 months (R12); old partitions are detached and dropped.
+  Special SQL: constraints.sql §10 (PARTITION BY RANGE (at) and partition maintenance). The primary key includes "at" because of partitioning.
+  '''
+}
+
+Table order_offers {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  courier_id bigint [not null]
+  round int [not null, default: 1]
+  status offer_status [not null, default: 'pending']
+  offered_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null, note: 'offered_at + offer timeout (30 s, R2)']
+  responded_at timestamptz
+  distance_m int [note: 'courier to restaurant at offer time']
+  decline_reason offer_decline_reason
+
+  indexes {
+    (order_id, round, courier_id) [unique, name: 'order_offers_once_per_round_uq']
+    (courier_id, offered_at) [name: 'order_offers_courier_idx']
+    (offered_at) [name: 'order_offers_offered_at_idx']
+  }
+  Note: '''
+  Purpose: who was offered each order and the outcome; nobody is asked twice per round.
+  Writers: workers (S2, S4, S9), API (S3, S5, cancels and S8 withdraw).
+  Growth: ~2.5 per order -> ~25k/day, ~9M/year.
+  Retention: kept 12 months (R12). Not partitioned yet: global partial uniques need an unpartitioned table (docs/design/notes/schema-notes.md §5); old rows are deleted in batches.
+  Special SQL: constraints.sql §5 (one pending per order, one pending per courier, pending expiry index).
+  CHECK constraints: constraints.sql §13 (order_offers_round, order_offers_expiry_after_offer, order_offers_responded_consistent, order_offers_decline_reason).
+  '''
+}
+
+Table order_cancel_requests {
+  id bigint [pk, increment]
+  order_id bigint [not null]
+  requested_by bigint [not null]
+  reason_code varchar(50) [not null]
+  note varchar(500)
+  status cancel_request_status [not null, default: 'pending']
+  decided_by bigint [note: 'null when superseded by pickup']
+  decided_at timestamptz
+  version int [not null, default: 0]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (status, created_at) [name: 'order_cancel_requests_queue_idx']
+  }
+  Note: '''
+  Purpose: owner's cancellation request after READY_FOR_PICKUP, approved or rejected by the admin (T14).
+  Writers: API (owner request, admin decision), T12 marks a pending request superseded.
+  Growth: rare (<0.5% of orders).
+  Retention: kept with the order.
+  Special SQL: constraints.sql §6 (one pending request per order), §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (order_cancel_requests_decided_consistent).
+  '''
+}
+
+Table order_incidents {
+  id bigint [pk, increment]
+  order_id bigint [note: 'null only for restaurant_unresponsive']
+  restaurant_id bigint [note: 'always set: the order restaurant, or the paused restaurant']
+  type incident_type [not null]
+  category courier_problem_category [note: 'courier_problem only (R5)']
+  opened_by incident_opener [not null]
+  opened_by_user_id bigint
+  details text
+  opened_at timestamptz [not null, default: `now()`]
+  resolved_at timestamptz
+  resolved_by bigint [note: 'null when resolved automatically']
+  resolution_note varchar(500)
+
+  indexes {
+    (restaurant_id, opened_at) [name: 'order_incidents_restaurant_idx']
+  }
+  Note: '''
+  Purpose: problems that need attention; incidents never change the order status (R4, R5, R7).
+  Writers: workers (no_courier, capture_failed, restaurant_unresponsive, kitchen_late, delivery_overdue), API (courier_problem, admin resolve).
+  Growth: ~3% of orders -> ~300/day.
+  Retention: kept with the order.
+  Special SQL: constraints.sql §6 (one open incident per order and type; one open restaurant_unresponsive per restaurant; open-incident list index).
+  CHECK constraints: constraints.sql §13 (order_incidents_category, order_incidents_scope, order_incidents_restaurant_set, order_incidents_resolved_consistent).
+  '''
+}
+
+Table route_cache {
+  cache_key varchar(100) [pk, note: "'osrm:v1:{lat1},{lng1}:{lat2},{lng2}', coordinates rounded to 4 decimals (~11 m)"]
+  distance_m int [not null]
+  duration_s int [not null]
+  polyline text [not null, note: 'encoded route used by the simulator and the map']
+  fetched_at timestamptz [not null, default: `now()`]
+  expires_at timestamptz [not null]
+
+  indexes {
+    (expires_at) [name: 'route_cache_expiry_idx']
+  }
+  Note: '''
+  Purpose: cached OSRM routes (delivery fee distance at T1, courier routes at S5 / T12, simulator path).
+  Writers: API and workers.
+  Growth: ~10-20k/day at most.
+  Retention: expires after 7 days, then deleted (assumed).
+  CHECK constraints: constraints.sql §13 (route_cache_non_negative).
+  '''
+}
+
+Table courier_positions {
+  courier_id bigint [pk]
+  lat float8 [not null]
+  lng float8 [not null]
+  accuracy_m int
+  heading_deg int
+  speed_mps float8
+  recorded_at timestamptz [not null, note: 'device clock']
+  received_at timestamptz [not null, default: `now()`, note: 'server clock; freshness checks use this']
+
+  Note: '''
+  Purpose: latest position per courier (courier app or courier-simulator, D2); used by dispatch and the 150 m checks.
+  Writers: API (courier.location socket handler, upsert).
+  Growth: one row per courier, updated every ~3 s (~170 updates/s at 500 online couriers).
+  Retention: only the latest row per courier (R12).
+  Special SQL: constraints.sql §5 (bounding-box and freshness indexes, fillfactor for HOT updates).
+  CHECK constraints: constraints.sql §13 (courier_positions_coordinates).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 5. Payments and plumbing
+//////////////////////////////////////////////////////////////////////////////
+
+Table stripe_events {
+  event_id varchar(255) [pk, note: 'Stripe event id; insert first = dedupe']
+  type varchar(100) [not null]
+  payment_intent_id varchar(64)
+  received_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (received_at) [name: 'stripe_events_received_idx']
+    (payment_intent_id) [name: 'stripe_events_pi_idx']
+  }
+  Note: '''
+  Purpose: webhook deduplication (T2, T3, U8).
+  Writers: API (webhook handler).
+  Growth: ~3 per order -> ~30k/day.
+  Retention: deleted after 30 days (R12).
+  '''
+}
+
+Table outbox {
+  id bigint [pk, increment]
+  topic varchar(64) [not null, note: 'payment.void | payment.capture | socket.emit | email.* | ...']
+  order_id bigint [note: 'tracing only, no foreign key']
+  payload jsonb [not null]
+  idempotency_key varchar(200) [not null, unique, note: "e.g. 'order:42:void', 'order:42:capture:1'; duplicate inserts use ON CONFLICT DO NOTHING"]
+  attempts int [not null, default: 0]
+  next_attempt_at timestamptz [not null, default: `now()`]
+  last_error text
+  processed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: side effects written in the same transaction as the state change (Stripe calls, socket events, emails).
+  Writers: API and workers (insert); outbox worker (claim with SKIP LOCKED, mark processed).
+  Growth: ~12 per order -> ~120k/day; steady state ~0.8M rows with 7-day retention.
+  Retention: processed rows deleted after 7 days (R12).
+  Special SQL: constraints.sql §7 (unprocessed partial index, purge index, autovacuum settings).
+  CHECK constraints: constraints.sql §13 (outbox_attempts_non_negative).
+  '''
+}
+
+Table platform_settings {
+  key varchar(64) [pk]
+  value jsonb [not null]
+  description varchar(300)
+  updated_by bigint
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  Purpose: admin-editable settings (R2): minimum order, delivery fee, offer timeout, accept and payment windows, and the other timings.
+  Writers: API (admin); seeded in constraints.sql §11.
+  Growth: ~20 rows.
+  Retention: kept. Values are copied into order / offer columns when used, so edits never move existing deadlines.
+  '''
+}
+
+Table admin_audit_log {
+  id bigint [pk, increment]
+  admin_id bigint [not null]
+  action varchar(64) [not null, note: "e.g. 'order_chat.read', 'order.cancel', 'user.suspend', 'capture.retry'"]
+  target_type varchar(32) [not null, note: "e.g. 'conversation', 'order', 'user', 'restaurant'"]
+  target_id bigint [not null]
+  details jsonb [note: 'reason, version seen, request id']
+  at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (admin_id, at) [name: 'admin_audit_log_admin_idx']
+    (target_type, target_id, at) [name: 'admin_audit_log_target_idx']
+    (at) [name: 'admin_audit_log_at_idx']
+  }
+  Note: '''
+  Purpose: who did what as admin, including read-only access to order chats (chat Q5) and every restricted admin transition.
+  Writers: API (admin endpoints), in the same transaction as the action; reads are logged on access.
+  Growth: hundreds/day.
+  Retention: 24 months (decided after review), then deleted by run_retention() (constraints.sql §12).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// 6. Chat
+//////////////////////////////////////////////////////////////////////////////
+
+Table conversations {
+  id bigint [pk, increment]
+  type conversation_type [not null]
+  order_id bigint [note: 'required for order chats; optional context for support chats']
+  customer_id bigint [not null]
+  restaurant_id bigint [note: 'order chats only']
+  status conversation_status [not null, default: 'open']
+  last_seq int [not null, default: 0, note: 'incremented under the row lock (C2)']
+  last_message_at timestamptz
+  last_reply_email_at timestamptz [note: 'unread-reply email throttle: at most 1 per hour']
+  resolved_at timestamptz
+  resolved_by bigint
+  closed_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (restaurant_id, last_message_at) [name: 'conversations_restaurant_inbox_idx']
+    (type, status, last_message_at) [name: 'conversations_support_inbox_idx']
+    (customer_id, last_message_at) [name: 'conversations_customer_idx']
+  }
+  Note: '''
+  Purpose: order chats (customer and restaurant) and support chats (customer and admin).
+  Writers: API (C1-C4), sweeper (C5, unread-reply emails).
+  Growth: ~1k/day (assumed: 10% of orders open a chat).
+  Retention: kept (read-only after CLOSED).
+  Special SQL: constraints.sql §8 (one order chat per order, one non-closed support chat per customer), §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (conversations_order_fields, conversations_support_fields, conversations_closed_consistent, conversations_resolved_consistent, conversations_last_seq).
+  '''
+}
+
+Table messages {
+  id bigint [pk, increment]
+  conversation_id bigint [not null]
+  seq int [not null, note: 'gap-free per conversation']
+  sender_id bigint [note: 'null for system lines']
+  sender_role user_role
+  kind message_kind [not null, default: 'text']
+  body text [not null]
+  client_msg_id uuid [note: 'client-generated; makes retries idempotent']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (conversation_id, seq) [unique, name: 'messages_conversation_seq_uq']
+    (conversation_id, client_msg_id) [unique, name: 'messages_client_msg_uq']
+  }
+  Note: '''
+  Purpose: chat messages, plain text up to 2000 characters (chat Q6).
+  Writers: API (C2), system lines on resolve.
+  Growth: ~6 per conversation -> ~6k/day.
+  Retention: kept 24 months (assumed); monthly partitioning later if needed.
+  CHECK constraints: constraints.sql §13 (messages_seq, messages_body_length, messages_system_sender, messages_client_id_for_text).
+  '''
+}
+
+Table conversation_reads {
+  conversation_id bigint [not null]
+  user_id bigint [not null]
+  last_read_seq int [not null, default: 0, note: 'only moves forward: GREATEST(old, new)']
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (conversation_id, user_id) [pk]
+  }
+  Note: '''
+  Purpose: read position per participant; unread = last_seq - last_read_seq.
+  Writers: API (H9).
+  Growth: ~2 per conversation.
+  Retention: kept with the conversation.
+  Special SQL: constraints.sql §9 (updated_at).
+  CHECK constraints: constraints.sql §13 (conversation_reads_seq).
+  '''
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Relationships (ON DELETE: never cascade into orders or payments)
+// One-to-one links are written child > parent: dbml2sql puts the FK on the wrong side for '-' refs.
+//////////////////////////////////////////////////////////////////////////////
+
+// identity
+Ref: courier_profiles.user_id > users.id [delete: restrict] // one-to-one: user_id is the PK
+Ref: applications.user_id > users.id [delete: cascade]
+Ref: applications.restaurant_id > restaurants.id [delete: restrict]
+Ref: applications.decided_by > users.id [delete: set null]
+Ref: email_tokens.user_id > users.id [delete: cascade]
+Ref: refresh_tokens.user_id > users.id [delete: cascade]
+Ref: refresh_tokens.replaced_by_id > refresh_tokens.id [delete: set null]
+Ref: account_status_history.user_id > users.id [delete: cascade]
+
+// catalog
+Ref: restaurants.brand_id > brands.id [delete: restrict]
+Ref: restaurants.owner_id > users.id [delete: restrict] // one-to-one: owner_id is UNIQUE
+Ref: menu_items.brand_id > brands.id [delete: restrict]
+Ref: restaurant_item_availability.restaurant_id > restaurants.id [delete: cascade]
+Ref: restaurant_item_availability.menu_item_id > menu_items.id [delete: cascade]
+Ref: restaurant_item_availability.updated_by > users.id [delete: set null]
+
+// customer side
+Ref: delivery_addresses.user_id > users.id [delete: cascade]
+Ref: carts.customer_id > users.id [delete: cascade] // one-to-one: customer_id is UNIQUE
+Ref: carts.restaurant_id > restaurants.id [delete: set null]
+Ref: carts.delivery_address_id > delivery_addresses.id [delete: set null]
+Ref: cart_items.cart_id > carts.id [delete: cascade]
+Ref: cart_items.menu_item_id > menu_items.id [delete: cascade]
+
+// orders and dispatch
+Ref: orders.customer_id > users.id [delete: restrict]
+Ref: orders.restaurant_id > restaurants.id [delete: restrict]
+Ref: orders.courier_id > users.id [delete: restrict]
+Ref: orders.delivery_address_id > delivery_addresses.id [delete: set null]
+Ref: order_items.order_id > orders.id [delete: restrict]
+Ref: order_items.menu_item_id > menu_items.id [delete: set null]
+Ref: order_status_history.order_id > orders.id [delete: restrict]
+Ref: order_offers.order_id > orders.id [delete: restrict]
+Ref: order_offers.courier_id > users.id [delete: restrict]
+Ref: order_cancel_requests.order_id > orders.id [delete: restrict]
+Ref: order_cancel_requests.requested_by > users.id [delete: restrict]
+Ref: order_cancel_requests.decided_by > users.id [delete: set null]
+Ref: order_incidents.order_id > orders.id [delete: restrict]
+Ref: order_incidents.restaurant_id > restaurants.id [delete: restrict]
+Ref: order_incidents.opened_by_user_id > users.id [delete: set null]
+Ref: order_incidents.resolved_by > users.id [delete: set null]
+Ref: courier_positions.courier_id > courier_profiles.user_id [delete: cascade] // one-to-one: courier_id is the PK
+
+// payments and plumbing
+Ref: platform_settings.updated_by > users.id [delete: set null]
+Ref: admin_audit_log.admin_id > users.id [delete: restrict]
+
+// chat
+Ref: conversations.order_id > orders.id [delete: restrict]
+Ref: conversations.customer_id > users.id [delete: restrict]
+Ref: conversations.restaurant_id > restaurants.id [delete: restrict]
+Ref: conversations.resolved_by > users.id [delete: set null]
+Ref: messages.conversation_id > conversations.id [delete: restrict]
+Ref: messages.sender_id > users.id [delete: set null]
+Ref: conversation_reads.conversation_id > conversations.id [delete: cascade]
+Ref: conversation_reads.user_id > users.id [delete: cascade]
+
+//////////////////////////////////////////////////////////////////////////////
+// Table groups
+//////////////////////////////////////////////////////////////////////////////
+
+TableGroup identity {
+  users
+  courier_profiles
+  applications
+  email_tokens
+  refresh_tokens
+  account_status_history
+}
+
+TableGroup catalog {
+  brands
+  restaurants
+  menu_items
+  restaurant_item_availability
+  osm_search_cache
+}
+
+TableGroup customer_side {
+  delivery_addresses
+  carts
+  cart_items
+}
+
+TableGroup orders_and_dispatch {
+  orders
+  order_items
+  order_status_history
+  order_offers
+  order_cancel_requests
+  order_incidents
+  route_cache
+  courier_positions
+}
+
+TableGroup payments_and_plumbing {
+  stripe_events
+  outbox
+  platform_settings
+  admin_audit_log
+}
+
+TableGroup chat {
+  conversations
+  messages
+  conversation_reads
+}

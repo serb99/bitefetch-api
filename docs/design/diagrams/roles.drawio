@@ -1,0 +1,686 @@
+<mxfile host="65bd71144e">
+    <diagram id="customer" name="Customer">
+        <mxGraphModel dx="2508" dy="1260" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="1212" math="0" shadow="0">
+            <root>
+                <mxCell id="0" />
+                <mxCell id="1" parent="0" />
+                <mxCell id="grp1" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Before login (public)" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="uc2" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Browse restaurants" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc3" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Search restaurants near an address" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc4" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="View a restaurant's menu" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc5" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Sign up" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc6" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Activate account (email link)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="uc7" parent="grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Log in" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="grp8" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Account" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="390" as="geometry" />
+                </mxCell>
+                <mxCell id="uc9" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Log out" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc10" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="View profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc11" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Edit profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc12" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Change password" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc13" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Reset forgotten password" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="uc14" parent="grp8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Delete account" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="grp15" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Addresses" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="680" as="geometry" />
+                </mxCell>
+                <mxCell id="uc16" parent="grp15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Add delivery address" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc17" parent="grp15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Edit delivery address" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc18" parent="grp15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Delete delivery address" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc19" parent="grp15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Select active delivery address" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc20" parent="grp15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Set default address" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="grp21" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Chat" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="970" as="geometry" />
+                </mxCell>
+                <mxCell id="uc22" parent="grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Start chat with restaurant (about an order)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc23" parent="grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Start support chat" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc24" parent="grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Send message" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc25" parent="grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="View chat history" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="grp26" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Ordering" vertex="1">
+                    <mxGeometry height="408" width="520" x="920" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="uc27" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Add item to cart" vertex="1">
+                    <mxGeometry height="54" width="200" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc28" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Change item quantity" vertex="1">
+                    <mxGeometry height="54" width="200" x="300" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc29" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Remove item from cart" vertex="1">
+                    <mxGeometry height="54" width="200" x="20" y="138" as="geometry" />
+                </mxCell>
+                <mxCell id="uc30" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Clear cart" vertex="1">
+                    <mxGeometry height="54" width="200" x="300" y="138" as="geometry" />
+                </mxCell>
+                <mxCell id="uc31" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Review cart" vertex="1">
+                    <mxGeometry height="54" width="200" x="20" y="236" as="geometry" />
+                </mxCell>
+                <mxCell id="uc32" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Enter payment details (Stripe test card)" vertex="1">
+                    <mxGeometry height="54" width="200" x="300" y="236" as="geometry" />
+                </mxCell>
+                <mxCell id="uc33" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Retry a failed payment" vertex="1">
+                    <mxGeometry height="54" width="200" x="20" y="334" as="geometry" />
+                </mxCell>
+                <mxCell id="uc34" parent="grp26" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Place order" vertex="1">
+                    <mxGeometry height="54" width="200" x="300" y="334" as="geometry" />
+                </mxCell>
+                <mxCell id="grp35" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="After ordering" vertex="1">
+                    <mxGeometry height="250" width="520" x="920" y="548" as="geometry" />
+                </mxCell>
+                <mxCell id="uc36" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Track order status" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc37" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Track courier on the map" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc38" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Cancel order (until allowed status)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc39" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="View order history" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="uc40" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="View order details" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="uc41" parent="grp35" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Download receipt (PDF)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="grp42" parent="1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Optional extras" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="838" as="geometry" />
+                </mxCell>
+                <mxCell id="uc43" parent="grp42" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Reorder a past order" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc44" parent="grp42" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Rate restaurant or courier" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="uc45" parent="grp42" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Save favorite restaurants" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="guest" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Guest" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="170" as="geometry" />
+                </mxCell>
+                <mxCell id="customer" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Customer" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="581" as="geometry" />
+                </mxCell>
+                <mxCell id="e46" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="grp1" value="">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="710" y="215.68" as="sourcePoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e47" edge="1" parent="1" style="endArrow=block;endFill=0;endSize=14;html=1;rounded=0;strokeColor=#333333;" value="">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="740" y="597" as="sourcePoint" />
+                        <mxPoint x="740" y="276" as="targetPoint" />
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e48" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="grp8" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e49" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="grp15" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e50" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="grp21" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e51" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="grp26" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e52" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="grp35" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e53" edge="1" parent="1" source="customer" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;dashed=1;" target="grp42" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e54" edge="1" parent="1" source="uc34" style="endArrow=open;endFill=0;dashed=1;html=0;fontSize=10;labelBackgroundColor=#ffe6cc;" target="uc32" value="&lt;&lt;include&gt;&gt;">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="e55" edge="1" parent="1" source="uc33" style="endArrow=open;endFill=0;dashed=1;html=0;fontSize=10;labelBackgroundColor=#ffe6cc;" target="uc34" value="&lt;&lt;extend&gt;&gt;">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="t56" parent="1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="BiteFetch – Customer use cases" vertex="1">
+                    <mxGeometry height="40" width="600" x="40" y="30" as="geometry" />
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="restaurant-owner" name="Restaurant Owner">
+        <mxGraphModel dx="1045" dy="525" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="1192" math="0" shadow="0">
+            <root>
+                <mxCell id="ro-0" />
+                <mxCell id="ro-1" parent="ro-0" />
+                <mxCell id="ro-grp1" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Before approval" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc2" parent="ro-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Sign up (with restaurant details)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc3" parent="ro-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Activate account (email link)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc4" parent="ro-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Log in" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc5" parent="ro-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="View approval status (pending, rejected)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc6" parent="ro-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Reapply after rejection" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp7" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Account" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="390" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc8" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Log out" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc9" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="View profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc10" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Edit profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc11" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Change password" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc12" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Reset forgotten password" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc13" parent="ro-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Delete account" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp14" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Restaurant" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="680" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc15" parent="ro-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="View restaurant details" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc16" parent="ro-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Edit restaurant info (phone, opening hours)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc17" parent="ro-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Set restaurant open or closed" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc18" parent="ro-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Pause incoming orders temporarily" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp19" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fad9d5;strokeColor=#ae4132;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Menu" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="902" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc20" parent="ro-grp19" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="View menu" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc21" parent="ro-grp19" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="Mark item available or unavailable" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc22" parent="ro-grp19" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;dashed=1;fontSize=12;" value="Edit item price or description" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp23" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Orders" vertex="1">
+                    <mxGeometry height="454" width="520" x="920" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc24" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Receive new order notification" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc25" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View incoming orders" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc26" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View order details" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc27" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Accept order" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc28" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Reject order (with a reason)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc29" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Set preparation time" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc30" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Mark order ready for pickup" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="244" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc31" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View active orders" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="244" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc32" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View order history" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="312" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc33" parent="ro-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Cancel an accepted order (until marked ready)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="312" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp34" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Dispatch visibility" vertex="1">
+                    <mxGeometry height="114" width="520" x="920" y="594" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc35" parent="ro-grp34" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="See assigned courier" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc36" parent="ro-grp34" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="See courier's estimated arrival" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp37" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Chat" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="748" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc38" parent="ro-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="View chat inbox" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc39" parent="ro-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Reply to customer" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc40" parent="ro-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Mark chat as resolved" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-grp41" parent="ro-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Optional extras" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="970" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc42" parent="ro-grp41" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="View sales summary" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc43" parent="ro-grp41" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Export order report" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc44" parent="ro-grp41" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Reply to ratings (if ratings exist)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-applicant" parent="ro-1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Applicant&lt;br&gt;(pending owner)" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="180" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-owner" parent="ro-1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Restaurant Owner&lt;br&gt;(approved)" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="547" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e45" edge="1" parent="ro-1" source="ro-applicant" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp1" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e46" edge="1" parent="ro-1" source="ro-owner" style="endArrow=block;endFill=0;endSize=14;html=1;rounded=0;strokeColor=#333333;" target="ro-applicant" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e47" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp7" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e48" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp14" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e49" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp19" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e50" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp23" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e51" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp34" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e52" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ro-grp37" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-e53" edge="1" parent="ro-1" source="ro-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;dashed=1;" target="ro-grp41" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-t54" parent="ro-1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="BiteFetch – Restaurant Owner use cases" vertex="1">
+                    <mxGeometry height="40" width="600" x="40" y="30" as="geometry" />
+                </mxCell>
+                <mxCell id="ro-uc-osm" value="Pick the matching OSM restaurant at signup" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="ro-grp1"><mxGeometry x="270" y="176" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ro-uc-t14" value="Request cancellation after ready (T14)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="ro-grp23"><mxGeometry x="20" y="380" width="230" height="54" as="geometry" /></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="courier" name="Courier">
+        <mxGraphModel dx="1840" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="1008" math="0" shadow="0">
+            <root>
+                <mxCell id="co-0" />
+                <mxCell id="co-1" parent="co-0" />
+                <mxCell id="co-grp1" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Before approval" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc2" parent="co-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Sign up (with vehicle type and contact details)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc3" parent="co-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Activate account (email link)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc4" parent="co-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Log in" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc5" parent="co-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="View approval status (pending, rejected)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc6" parent="co-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;dashed=1;fontSize=12;" value="Reapply after rejection" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp7" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Account" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="390" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc8" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Log out" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc9" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="View profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc10" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Edit profile" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc11" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Change password" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc12" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Reset forgotten password" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc13" parent="co-grp7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Delete account" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp14" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Availability" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="680" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc15" parent="co-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Go online" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc16" parent="co-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Go offline" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc17" parent="co-grp14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="View current status" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp18" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Offers" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc19" parent="co-grp18" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Receive order offer" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc20" parent="co-grp18" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View offer details (restaurant, delivery address, distance)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc21" parent="co-grp18" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Accept offer" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc22" parent="co-grp18" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Decline offer" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp23" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Deliveries" vertex="1">
+                    <mxGeometry height="250" width="520" x="920" y="322" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc24" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="View active delivery" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc25" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="See route to restaurant" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc26" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Confirm pickup at restaurant" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc27" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="See route to customer" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc28" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Mark order delivered" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc29" parent="co-grp23" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" value="Report a problem" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp30" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="History" vertex="1">
+                    <mxGeometry height="114" width="520" x="920" y="612" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc31" parent="co-grp30" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="View completed deliveries" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc32" parent="co-grp30" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="View delivery details" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-grp33" parent="co-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Optional extras" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="766" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc34" parent="co-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="View earnings summary" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc35" parent="co-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="View ratings" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="co-uc36" parent="co-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Set working zone" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="co-applicant" parent="co-1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Applicant&lt;br&gt;(pending courier)" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="180" as="geometry" />
+                </mxCell>
+                <mxCell id="co-owner" parent="co-1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Courier&lt;br&gt;(approved)" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="479" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e37" edge="1" parent="co-1" source="co-applicant" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp1" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e38" edge="1" parent="co-1" source="co-owner" style="endArrow=block;endFill=0;endSize=14;html=1;rounded=0;strokeColor=#333333;" target="co-applicant" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e39" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp7" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e40" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp14" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e41" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp18" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e42" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp23" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e43" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="co-grp30" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-e44" edge="1" parent="co-1" source="co-owner" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;dashed=1;" target="co-grp33" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="co-t45" parent="co-1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="BiteFetch – Courier use cases" vertex="1">
+                    <mxGeometry height="40" width="600" x="40" y="30" as="geometry" />
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="admin" name="Admin">
+        <mxGraphModel dx="2090" dy="1050" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1480" pageHeight="1270" math="0" shadow="0">
+            <root>
+                <mxCell id="ad-0" />
+                <mxCell id="ad-1" parent="ad-0" />
+                <mxCell id="ad-grp1" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Account" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc2" parent="ad-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Log in" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc3" parent="ad-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Log out" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc4" parent="ad-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Change password" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc5" parent="ad-grp1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" value="Reset forgotten password" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp6" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Approvals" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="322" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc7" parent="ad-grp6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="View pending restaurant owner applications" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc8" parent="ad-grp6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="View pending courier applications" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc9" parent="ad-grp6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Approve application" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc10" parent="ad-grp6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" value="Reject application (with a reason)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp11" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="User management" vertex="1">
+                    <mxGeometry height="250" width="520" x="40" y="612" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc12" parent="ad-grp11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="View all users" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc13" parent="ad-grp11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Search and filter users by role or status" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc14" parent="ad-grp11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="View user details" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc15" parent="ad-grp11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Suspend account" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc16" parent="ad-grp11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=12;" value="Reactivate account" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp17" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Support" vertex="1">
+                    <mxGeometry height="182" width="520" x="40" y="902" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc18" parent="ad-grp17" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="View support inbox" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc19" parent="ad-grp17" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Reply to customer" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc20" parent="ad-grp17" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" value="Mark chat as resolved" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp21" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#fad9d5;strokeColor=#ae4132;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Restaurants and menus" vertex="1">
+                    <mxGeometry height="250" width="520" x="920" y="100" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc22" parent="ad-grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="View restaurants" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc23" parent="ad-grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="Manage brands (add, edit, delete)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc24" parent="ad-grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="Manage menu items per brand (add, edit, delete)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc25" parent="ad-grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="Toggle item availability" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc26" parent="ad-grp21" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" value="Set item image (Unsplash URL)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp27" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Orders" vertex="1">
+                    <mxGeometry height="318" width="520" x="920" y="390" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc28" parent="ad-grp27" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View all orders" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc29" parent="ad-grp27" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Filter orders by status" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc30" parent="ad-grp27" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="View order details" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc31" parent="ad-grp27" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Cancel order" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc32" parent="ad-grp27" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" value="Run restricted admin transitions (T14-T17, S7-S8)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="176" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp33" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Live monitoring" vertex="1">
+                    <mxGeometry height="250" width="520" x="920" y="748" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc34" parent="ad-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="View live map of active deliveries" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc35" parent="ad-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="See courier positions" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc36" parent="ad-grp33" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" value="See dispatch state per order (who was offered, who declined)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-grp37" parent="ad-1" style="rounded=1;arcSize=4;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;dashed=1;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontStyle=1;fontSize=14;container=1;collapsible=0;" value="Optional extras" vertex="1">
+                    <mxGeometry height="182" width="520" x="920" y="1038" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc38" parent="ad-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="View audit log" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc39" parent="ad-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="View dashboard stats" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="40" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc40" parent="ad-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Manage platform settings (delivery fee, offer timeout)" vertex="1">
+                    <mxGeometry height="54" width="230" x="20" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc41" parent="ad-grp37" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=1;fontSize=12;" value="Refund order (if refunds are modeled)" vertex="1">
+                    <mxGeometry height="54" width="230" x="270" y="108" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-admin" parent="ad-1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontStyle=1;fontSize=14;" value="Admin&lt;br&gt;(seeded, no sign-up)" vertex="1">
+                    <mxGeometry height="90" width="60" x="710" y="547" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e42" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp1" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e43" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp6" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e44" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp11" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e45" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp17" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e46" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp21" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e47" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp27" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e48" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;" target="ad-grp33" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-e49" edge="1" parent="ad-1" source="ad-admin" style="endArrow=none;html=1;rounded=0;strokeColor=#666666;dashed=1;" target="ad-grp37" value="">
+                    <mxGeometry relative="1" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-t50" parent="ad-1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="BiteFetch – Admin use cases" vertex="1">
+                    <mxGeometry height="40" width="600" x="40" y="30" as="geometry" />
+                </mxCell>
+                <mxCell id="ad-uc-match" value="Confirm restaurant match on approval" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="ad-grp6"><mxGeometry x="20" y="176" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-orderchats" value="Read order chats (read-only, audited)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="ad-grp17"><mxGeometry x="270" y="108" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-unpause" value="Unpause restaurant" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ae4132;fontSize=12;" vertex="1" parent="ad-grp21"><mxGeometry x="270" y="176" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-cancelreq" value="Review cancellation requests" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="ad-grp27"><mxGeometry x="270" y="176" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-capture" value="Retry failed capture" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="ad-grp27"><mxGeometry x="20" y="244" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-forcourier" value="Act on behalf of a courier (T16/T17)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="ad-grp27"><mxGeometry x="270" y="244" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-retrydispatch" value="Retry dispatch" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" vertex="1" parent="ad-grp33"><mxGeometry x="270" y="108" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-reassign" value="Reassign courier" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" vertex="1" parent="ad-grp33"><mxGeometry x="20" y="176" width="230" height="54" as="geometry" /></mxCell>
+                <mxCell id="ad-uc-incidents" value="View and resolve incidents" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#0e8088;fontSize=12;" vertex="1" parent="ad-grp33"><mxGeometry x="270" y="176" width="230" height="54" as="geometry" /></mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

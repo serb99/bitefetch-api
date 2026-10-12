@@ -1,7 +1,7 @@
 /**
  * Migration 4: applications.
  * One row per request to become a courier or restaurant owner (a new row for every re-application).
- * Source of truth: database/schema.dbml (group "identity").
+ * Source of truth: docs/design/database/schema.dbml (group "identity").
  *
  * Needs `users` (migration 2) and `restaurants` (migration 3), which is why it comes here.
  */

@@ -11,7 +11,7 @@
  * - run_retention(): called by the worker service once per hour, deletes old rows in batches.
  * - 62 CHECK constraints, added with pgm.addConstraint (a violation raises SQLSTATE 23514).
  *
- * Source of truth: database/constraints.sql.
+ * Source of truth: docs/design/database/constraints.sql.
  */
 
 exports.shorthands = undefined;

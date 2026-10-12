@@ -1,7 +1,7 @@
 /**
  * Migration 7: payments and plumbing.
  * Tables: stripe_events, outbox, platform_settings, admin_audit_log (+ default settings).
- * Source of truth: database/schema.dbml (group "payments_and_plumbing").
+ * Source of truth: docs/design/database/schema.dbml (group "payments_and_plumbing").
  *
  * Money in platform_settings is in euro cents (the *_minor keys).
  */

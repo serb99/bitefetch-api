@@ -2,7 +2,7 @@
  * Migration 6: orders and dispatch.
  * Tables: orders, order_items, order_status_history (partitioned), order_offers,
  *         order_cancel_requests, order_incidents, route_cache, courier_positions.
- * Source of truth: database/schema.dbml (group "orders_and_dispatch").
+ * Source of truth: docs/design/database/schema.dbml (group "orders_and_dispatch").
  *
  * order_status_history is created PARTITIONED BY RANGE (at) from the start: a normal table cannot
  * be turned into a partitioned one later without copying all its rows. It also gets a DEFAULT

@@ -1,0 +1,313 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="hp" name="Happy path">
+    <mxGraphModel dx="2049" dy="1217" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="2776" background="light-dark(#ffffff, #121212)" math="0" shadow="0">
+      <root>
+        <mxCell id="hp-root0" />
+        <mxCell id="hp-root1" parent="hp-root0" />
+        <mxCell id="hp-lane-C" parent="hp-root1" style="swimlane;horizontal=1;startSize=40;html=1;collapsible=0;fontStyle=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f5f9ff;" value="Customer" vertex="1">
+          <mxGeometry height="2656" width="250" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-7" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Review cart, checkout" vertex="1">
+          <mxGeometry height="100" width="190" x="30" y="299" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-9" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Show payment form&lt;br&gt;join room order:{id}" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="413" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-10" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Enter test card, pay" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="471" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-14" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Status: waiting for restaurant" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="689" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-18" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Status: preparing · ETA shown" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="897" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-25" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Courier shown on map" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1279" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-29" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Map marker moves" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1453" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-34" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Status: ready for pickup" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1719" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-39" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Status: on the way · ETA" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1951" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-44" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Status: delivered" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2217" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-48" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Download receipt" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2527" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-50" parent="hp-lane-C" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#6c8ebf;" value="Receipt saved" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2585" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-lane-R" parent="hp-root1" style="swimlane;horizontal=1;startSize=40;html=1;collapsible=0;fontStyle=1;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#f6fbf5;" value="Restaurant owner" vertex="1">
+          <mxGeometry height="2656" width="250" x="290" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-13" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="New order alert" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-16" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="Accept, prep time 20 min" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="839" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-24" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="Sees assigned courier + ETA" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1221" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-31" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="Food done, mark ready" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1603" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-38" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="Order leaves active list" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1893" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-45" parent="hp-lane-R" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#82b366;" value="Order moves to history" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2275" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-lane-K" parent="hp-root1" style="swimlane;horizontal=1;startSize=40;html=1;collapsible=0;fontStyle=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;swimlaneFillColor=#faf6fc;" value="Courier" vertex="1">
+          <mxGeometry height="2656" width="250" x="540" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-1" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Go online" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="91" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-3" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Join room courier:{id}&lt;br&gt;send position every 3 s" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="149" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-20" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Offer: restaurant, address, distance&lt;br&gt;app timer 25 s (server allows 30 s)" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1047" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-21" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Accept offer" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1105" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-23" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Navigate to restaurant" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1163" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-27" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Driving (real or simulated)" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1395" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-33" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Food is ready" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1661" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-35" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="At the counter (≤ 150 m),&lt;br&gt;confirm pickup" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1777" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-37" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Navigate to customer" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="1835" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-41" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="At the door (≤ 150 m),&lt;br&gt;mark delivered" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2101" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-43" parent="hp-lane-K" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#9673a6;" value="Delivery complete" vertex="1">
+          <mxGeometry height="44" width="190" x="30" y="2159" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-lane-A" parent="hp-root1" style="swimlane;horizontal=1;startSize=40;html=1;collapsible=0;fontStyle=1;fontSize=14;fillColor=#eeeeee;strokeColor=#666666;swimlaneFillColor=#fafafa;" value="Admin" vertex="1">
+          <mxGeometry height="2656" width="260" x="790" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-5" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Open live monitoring" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="207" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-15" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Order on live board" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="747" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-26" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Board: courier assigned" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="1337" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-30" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Live map moves" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="1511" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-40" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Board: picked up" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="2009" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-46" parent="hp-lane-A" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#666666;" value="Order leaves live board" vertex="1">
+          <mxGeometry height="44" width="140" x="12" y="2333" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-lane-S" parent="hp-root1" style="swimlane;horizontal=1;startSize=40;html=1;collapsible=0;fontStyle=1;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;swimlaneFillColor=#fffaf3;" value="System (API · workers · DB) + Stripe" vertex="1">
+          <mxGeometry height="2656" width="340" x="1050" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-2" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="Mark courier online" vertex="1">
+          <mxGeometry height="44" width="300" x="20" y="91" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-4" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="Store latest position&lt;br&gt;(courier_positions; Redis GEO later)" vertex="1">
+          <mxGeometry height="44" width="300" x="20" y="149" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-6" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="List active orders · join room admin" vertex="1">
+          <mxGeometry height="44" width="300" x="20" y="207" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-8" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T1&lt;/b&gt; guard: restaurant open and not paused · items available&lt;br&gt;at this restaurant · address in range · fresh courier within 10 km&lt;br&gt;totals recomputed on the server&lt;br&gt;→ insert order PENDING_PAYMENT · create PaymentIntent (manual capture)" vertex="1">
+          <mxGeometry height="158" width="300" x="20" y="299" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-11" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#eef2fb;strokeColor=#3d5a99;dashed=1;fontColor=#1f3466;" value="&lt;i&gt;Stripe (external)&lt;/i&gt;&lt;br&gt;Stripe authorizes the card&lt;br&gt;(hold only, not charged)" vertex="1">
+          <mxGeometry height="44" width="300" x="20" y="471" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-12" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T3&lt;/b&gt; → PLACED (deduped by Stripe event id)&lt;br&gt;accept_deadline = now + 5 min" vertex="1">
+          <mxGeometry height="218" width="300" x="20" y="573" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-17" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T6&lt;/b&gt; → ACCEPTED&lt;br&gt;estimated_ready_at · dispatch_after" vertex="1">
+          <mxGeometry height="102" width="300" x="20" y="839" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-19" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="Dispatch worker: &lt;b&gt;S1&lt;/b&gt; dispatch_after reached&lt;br&gt;&lt;b&gt;S2&lt;/b&gt; nearest online courier → offer (server deadline 30 s)" vertex="1">
+          <mxGeometry height="102" width="300" x="20" y="989" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-22" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;S5&lt;/b&gt; lock order · offer accepted&lt;br&gt;courier_id set · dispatch_state = assigned" vertex="1">
+          <mxGeometry height="276" width="300" x="20" y="1105" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-28" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="Store position · fan out to rooms" vertex="1">
+          <mxGeometry height="160" width="300" x="20" y="1395" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-32" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T10&lt;/b&gt; → READY_FOR_PICKUP · ready_at" vertex="1">
+          <mxGeometry height="160" width="300" x="20" y="1603" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-36" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T12&lt;/b&gt; → PICKED_UP · location check&lt;br&gt;estimated_delivery_at from OSRM route" vertex="1">
+          <mxGeometry height="276" width="300" x="20" y="1777" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-42" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="&lt;b&gt;T13&lt;/b&gt; → DELIVERED · courier free again&lt;br&gt;outbox: payment.capture" vertex="1">
+          <mxGeometry height="276" width="300" x="20" y="2101" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-47" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#eef2fb;strokeColor=#3d5a99;dashed=1;fontColor=#1f3466;" value="&lt;i&gt;Stripe (external)&lt;/i&gt;&lt;br&gt;Stripe captures the charge&lt;br&gt;payment_status = captured" vertex="1">
+          <mxGeometry height="44" width="300" x="20" y="2435" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-49" parent="hp-lane-S" style="rounded=1;arcSize=18;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffffff;strokeColor=#d79b00;" value="Render PDF receipt" vertex="1">
+          <mxGeometry height="102" width="300" x="20" y="2527" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph0" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="0 · Before the order" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="134" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph1" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="1 · Checkout &amp; payment" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="342" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph2" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="2 · Restaurant accepts" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="882" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph3" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="3 · Courier dispatch" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="1032" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph4" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="4 · Ready &amp; pickup" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="1646" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph5" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="5 · Delivery   (position stream M19–M21 continues until delivered)" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="2144" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-ph6" parent="hp-root1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#bbbbbb;opacity=85;align=left;spacingLeft=10;fontStyle=1;fontSize=12;" value="6 · After delivery" vertex="1">
+          <mxGeometry height="26" width="1350" x="40" y="2570" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e0" edge="1" parent="hp-root1" source="hp-1" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="hp-2" value="M1 · POST&lt;br&gt;/api/courier/availability {online: true}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e1" edge="1" parent="hp-root1" source="hp-3" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="hp-4" value="M2 · ⚡ courier.location&lt;br&gt;{lat, lng}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e2" edge="1" parent="hp-root1" source="hp-5" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="hp-6" value="M3 · GET&lt;br&gt;/api/admin/orders">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e3" edge="1" parent="hp-root1" source="hp-7" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3165;entryDx=0;entryDy=0;" target="hp-8" value="M4 · POST /api/orders&lt;br&gt;header Idempotency-Key">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e4" edge="1" parent="hp-root1" source="hp-8" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.8608;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-9" value="M5 · 201 {orderId, clientSecret}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e5" edge="1" parent="hp-root1" source="hp-10" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#3d5a99;endArrow=block;endFill=1;dashed=1;fontColor=#3d5a99;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="hp-11" value="M6 · stripe.confirmCardPayment(clientSecret)&lt;br&gt;via Stripe.js">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e6" edge="1" parent="hp-root1" source="hp-11" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#3d5a99;endArrow=block;endFill=1;dashed=1;fontColor=#3d5a99;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="hp-12" value="M7 · webhook POST /api/webhooks/stripe&lt;br&gt;payment_intent.amount_capturable_updated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e7" edge="1" parent="hp-root1" source="hp-12" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.367;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-13" value="M8 · ⚡ order.new">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e8" edge="1" parent="hp-root1" source="hp-12" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.633;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-14" value="M9 · ⚡ order.updated · PLACED">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e9" edge="1" parent="hp-root1" source="hp-12" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.8991;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-15" value="M10 · ⚡&lt;br&gt;order.updated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e10" edge="1" parent="hp-root1" source="hp-16" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.2157;entryDx=0;entryDy=0;" target="hp-17" value="M11 · POST&lt;br&gt;/api/restaurant/orders/:id/accept {prepMinutes}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e11" edge="1" parent="hp-root1" source="hp-17" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.7843;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-18" value="M12 · ⚡ order.updated · ACCEPTED">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e12" edge="1" parent="hp-root1" source="hp-19" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.7843;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-20" value="M13 · ⚡ offer.created">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e13" edge="1" parent="hp-root1" source="hp-21" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.0797;entryDx=0;entryDy=0;" target="hp-22" value="M14 · POST&lt;br&gt;/api/courier/offers/:offerId/accept">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e14" edge="1" parent="hp-root1" source="hp-22" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.2899;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-23" value="M15 · 200&lt;br&gt;{order, route (OSRM, cached)}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e15" edge="1" parent="hp-root1" source="hp-22" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-24" value="M16 · ⚡ order.updated · courier assigned">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e16" edge="1" parent="hp-root1" source="hp-22" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.7101;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-25" value="M17 · ⚡ order.updated · courier assigned">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e17" edge="1" parent="hp-root1" source="hp-22" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.9203;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-26" value="M18 · ⚡&lt;br&gt;order.updated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e18" edge="1" parent="hp-root1" source="hp-27" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.1375;entryDx=0;entryDy=0;" target="hp-28" value="M19 · ⚡ courier.location&lt;br&gt;every 3 s">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e19" edge="1" parent="hp-root1" source="hp-28" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-29" value="M20 · ⚡ courier.position">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e20" edge="1" parent="hp-root1" source="hp-28" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.8625;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-30" value="M21 · ⚡&lt;br&gt;courier.position">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e21" edge="1" parent="hp-root1" source="hp-31" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.1375;entryDx=0;entryDy=0;" target="hp-32" value="M22 · POST&lt;br&gt;/api/restaurant/orders/:id/ready">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e22" edge="1" parent="hp-root1" source="hp-32" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-33" value="M23 · ⚡ order.updated&lt;br&gt;READY_FOR_PICKUP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e23" edge="1" parent="hp-root1" source="hp-32" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.8625;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-34" value="M24 · ⚡ order.updated · READY_FOR_PICKUP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e24" edge="1" parent="hp-root1" source="hp-35" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.0797;entryDx=0;entryDy=0;" target="hp-36" value="M25 · POST&lt;br&gt;/api/courier/orders/:id/pickup">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e25" edge="1" parent="hp-root1" source="hp-36" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.2899;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-37" value="M26 · 200&lt;br&gt;{route to customer}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e26" edge="1" parent="hp-root1" source="hp-36" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-38" value="M27 · ⚡ order.updated · PICKED_UP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e27" edge="1" parent="hp-root1" source="hp-36" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.7101;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-39" value="M28 · ⚡ order.updated · PICKED_UP">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e28" edge="1" parent="hp-root1" source="hp-36" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.9203;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-40" value="M29 · ⚡&lt;br&gt;order.updated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e29" edge="1" parent="hp-root1" source="hp-41" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.0797;entryDx=0;entryDy=0;" target="hp-42" value="M30 · POST&lt;br&gt;/api/courier/orders/:id/deliver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e30" edge="1" parent="hp-root1" source="hp-42" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.2899;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-43" value="M31 · 200&lt;br&gt;{status: DELIVERED}">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e31" edge="1" parent="hp-root1" source="hp-42" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-44" value="M32 · ⚡ order.updated · DELIVERED">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e32" edge="1" parent="hp-root1" source="hp-42" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.7101;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-45" value="M33 · ⚡ order.updated · DELIVERED">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e33" edge="1" parent="hp-root1" source="hp-42" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#d6792b;endArrow=block;endFill=1;strokeWidth=1.5;fontColor=#8a4a10;exitX=0;exitY=0.9203;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-46" value="M34 · ⚡&lt;br&gt;order.updated">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e34" edge="1" parent="hp-root1" source="hp-42" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#3d5a99;endArrow=block;endFill=1;dashed=1;fontColor=#3d5a99;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="hp-47" value="M35 · outbox worker → paymentIntents.capture&lt;br&gt;idempotency key order:{id}:capture:1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e35" edge="1" parent="hp-root1" source="hp-48" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.2157;entryDx=0;entryDy=0;" target="hp-49" value="M36 · GET&lt;br&gt;/api/orders/:id/receipt.pdf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-e36" edge="1" parent="hp-root1" source="hp-49" style="html=1;rounded=0;fontSize=10;labelBackgroundColor=#ffffff;strokeColor=#333333;dashed=1;endArrow=open;endFill=0;exitX=0;exitY=0.7843;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="hp-50" value="M37 · 200 application/pdf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-title" parent="hp-root1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="BiteFetch – Happy path: one order from checkout to delivered" vertex="1">
+          <mxGeometry height="40" width="900" x="40" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="hp-legend" parent="hp-root1" style="shape=note;size=14;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=10;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b&gt;Arrows&lt;/b&gt;&lt;br&gt;&lt;b&gt;━━▶&lt;/b&gt; HTTP API call (future REST endpoint)&lt;br&gt;&lt;b&gt;- - -▷&lt;/b&gt; HTTP response&lt;br&gt;&lt;font color=&quot;#d6792b&quot;&gt;&lt;b&gt;━━▶&lt;/b&gt;&lt;/font&gt; ⚡ socket.io event&lt;br&gt;&lt;font color=&quot;#3d5a99&quot;&gt;&lt;b&gt;- - -▶&lt;/b&gt;&lt;/font&gt; Stripe (Stripe.js, webhook, API)&lt;br&gt;&lt;br&gt;&lt;b&gt;Socket rooms&lt;/b&gt;&lt;br&gt;order:{id} · restaurant:{id} · courier:{id} · admin&lt;br&gt;conversation:{id} · user:{id}&lt;br&gt;&lt;br&gt;&lt;b&gt;Courier position&lt;/b&gt;&lt;br&gt;The courier app reports its own position (M2, M19).&lt;br&gt;Demos use a courier-simulator script.&lt;br&gt;&lt;br&gt;&lt;b&gt;order.updated payload&lt;/b&gt;&lt;br&gt;{id, status, dispatchState, courierId, eta, version}&lt;br&gt;Clients ignore events with an older version.&lt;br&gt;Every order.updated is also sent to the admin room.&lt;br&gt;&lt;br&gt;&lt;b&gt;References&lt;/b&gt;&lt;br&gt;T- and S-numbers = docs/design/notes/order-state-machine.md.&lt;br&gt;Each status change commits first; socket events and Stripe calls go out through the outbox.&lt;br&gt;&lt;br&gt;&lt;i&gt;Endpoint paths and event names are proposals.&lt;/i&gt;" vertex="1">
+          <mxGeometry height="490" width="330" x="1430" y="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,7 +1,7 @@
 /**
  * Migration 8: chat.
  * Tables: conversations, messages, conversation_reads.
- * Source of truth: database/schema.dbml (group "chat").
+ * Source of truth: docs/design/database/schema.dbml (group "chat").
  */
 
 exports.shorthands = undefined;
