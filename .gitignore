@@ -1,3 +1,4 @@
 node_modules/
 .env
 docs/design/implementation-plan.md
+.vscode/settings.json

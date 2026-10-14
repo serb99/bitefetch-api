@@ -12,7 +12,8 @@
     "migrate:down": "node-pg-migrate down --config-file ./config/migrate.config.js",
     "migrate:redo": "node-pg-migrate redo --config-file ./config/migrate.config.js",
     "migrate:test:up": "node-pg-migrate up --config-file ./config/migrate.test.config.js",
-    "migrate:test:down": "node-pg-migrate down --config-file ./config/migrate.test.config.js"
+    "migrate:test:down": "node-pg-migrate down --config-file ./config/migrate.test.config.js",
+    "seed": "node seeds/seed.js"
   },
   "keywords": [],
   "author": "",
