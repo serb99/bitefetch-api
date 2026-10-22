@@ -1,0 +1,30 @@
+info:
+  name: Request id reused
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseUrl}}/orderz/"
+  headers:
+    - name: x-request-id
+      value: my-test-123
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "404"
+    - expression: res.headers['x-request-id']
+      operator: isString
+    - expression: res.headers['x-request-id']
+      operator: eq
+      value: my-test-123
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
