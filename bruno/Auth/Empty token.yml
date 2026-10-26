@@ -1,0 +1,34 @@
+info:
+  name: Empty token
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/activate"
+  body:
+    type: json
+    data: "{}"
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "400"
+    - expression: res.body.error.code
+      operator: eq
+      value: VALIDATION_ERROR
+    - expression: res.body.error.details.length
+      operator: eq
+      value: "1"
+    - expression: res.body.error.details[0].field
+      operator: eq
+      value: token
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
