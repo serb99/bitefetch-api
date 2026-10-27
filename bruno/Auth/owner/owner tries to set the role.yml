@@ -1,0 +1,37 @@
+info:
+  name: owner tries to set the role
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/owner"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{roleTestEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Role Test Owner",
+        "phone": "+40 712 345 680",
+        "restaurantName": "Role Test Bistro",
+        "restaurantAddress": "Strada Exemplu 2, București",
+        "role": "admin"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: bru.setVar("roleTestEmail", `roletest+${Date.now()}@example.com`);
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "201"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,39 @@
+info:
+  name: 201 user created
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/owner"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{ownerEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Owner",
+        "phone": "+40 712 345 679",
+        "restaurantName": "Test Bistro",
+        "restaurantAddress": "Strada Exemplu 1, București"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: bru.setVar("ownerEmail", `\owner+${Date.now()}@example.com`);
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "201"
+    - expression: res.body.user.email
+      operator: eq
+      value: "{{ownerEmail}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

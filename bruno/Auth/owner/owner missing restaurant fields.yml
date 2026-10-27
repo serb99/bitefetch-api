@@ -1,0 +1,42 @@
+info:
+  name: owner missing restaurant fields
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/owner"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{ownerEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Owner"
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "400"
+    - expression: res.body.error.code
+      operator: eq
+      value: VALIDATION_ERROR
+    - expression: res.body.error.details.length
+      operator: eq
+      value: "2"
+    - expression: res.body.error.details[0].field
+      operator: eq
+      value: restaurantName
+    - expression: res.body.error.details[1].field
+      operator: eq
+      value: restaurantAddress
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

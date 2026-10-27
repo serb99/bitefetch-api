@@ -1,0 +1,36 @@
+info:
+  name: owner duplicate email
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup/owner"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{ownerEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Owner",
+        "phone": "+40 712 345 679",
+        "restaurantName": "Test Bistro",
+        "restaurantAddress": "Strada Exemplu 1, București"
+      }
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "409"
+    - expression: res.body.error.code
+      operator: eq
+      value: EMAIL_TAKEN
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

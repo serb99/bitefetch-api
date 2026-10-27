@@ -1,14 +1,20 @@
 info:
-  name: Empty token
+  name: missing phone
   type: http
-  seq: 7
+  seq: 4
 
 http:
   method: POST
-  url: "{{baseUrl}}/auth/activate"
+  url: "{{baseUrl}}/auth/signup/courier"
   body:
     type: json
-    data: "{}"
+    data: |-
+      {
+        "email": "{{courierEmail2}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Courier",
+        "vehicleType": "bike"
+      }
   auth: inherit
 
 runtime:
@@ -16,15 +22,12 @@ runtime:
     - expression: res.status
       operator: eq
       value: "400"
-    - expression: res.body.error.code
-      operator: eq
-      value: VALIDATION_ERROR
     - expression: res.body.error.details.length
       operator: eq
       value: "1"
     - expression: res.body.error.details[0].field
       operator: eq
-      value: token
+      value: phone
 
 settings:
   encodeUrl: true

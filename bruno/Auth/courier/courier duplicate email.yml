@@ -1,19 +1,20 @@
 info:
-  name: 409 email taken
+  name: courier duplicate email
   type: http
   seq: 2
 
 http:
   method: POST
-  url: "{{baseUrl}}/auth/signup"
+  url: "{{baseUrl}}/auth/signup/courier"
   body:
     type: json
     data: |-
       {
-        "email": "{{testEmail}}",
-        "password": "supersecret123",
-        "fullName": "Test Customer",
-        "phone": "+40 712 345 678"
+        "email": "{{courierEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Courier",
+        "phone": "+40 712 345 681",
+        "vehicleType": "bike"
       }
   auth: inherit
 

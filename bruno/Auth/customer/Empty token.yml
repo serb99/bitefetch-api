@@ -1,14 +1,14 @@
 info:
-  name: Garbage token
+  name: Empty token
   type: http
-  seq: 6
+  seq: 1
 
 http:
   method: POST
   url: "{{baseUrl}}/auth/activate"
   body:
     type: json
-    data: '{ "token": "nope" }'
+    data: "{}"
   auth: inherit
 
 runtime:
@@ -18,7 +18,13 @@ runtime:
       value: "400"
     - expression: res.body.error.code
       operator: eq
-      value: INVALID_OR_EXPIRED_TOKEN
+      value: VALIDATION_ERROR
+    - expression: res.body.error.details.length
+      operator: eq
+      value: "1"
+    - expression: res.body.error.details[0].field
+      operator: eq
+      value: token
 
 settings:
   encodeUrl: true

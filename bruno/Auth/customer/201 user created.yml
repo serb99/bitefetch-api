@@ -1,0 +1,43 @@
+info:
+  name: 201 user created
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/signup"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{testEmail}}",
+        "password": "{{testPassword}}",
+        "fullName": "Test Customer",
+        "phone": "+40 712 345 678"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: bru.setVar("testEmail", `test+${Date.now()}@example.com`);
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "201"
+    - expression: res.body.user.id
+      operator: isDefined
+    - expression: res.body.user.email
+      operator: eq
+      value: "{{testEmail}}"
+    - expression: res.body.user.passwordHash
+      operator: isUndefined
+    - expression: res.body.user.password_hash
+      operator: isUndefined
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

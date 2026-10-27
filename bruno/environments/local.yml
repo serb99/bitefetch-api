@@ -5,3 +5,6 @@ variables:
   - secret: true
     name: activationToken
     description: ""
+  - secret: true
+    name: testPassword
+    description: ""

@@ -1,0 +1,31 @@
+info:
+  name: owner activation
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/activate"
+  body:
+    type: json
+    data: '{"token": "{{activationToken}}"}'
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: bru.setVar("activationToken", bru.getEnvVar("activationToken").trim());
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "200"
+    - expression: res.body.message
+      operator: contains
+      value: Email confirmed, waiting for admin approval
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

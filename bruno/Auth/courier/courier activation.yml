@@ -1,24 +1,27 @@
 info:
-  name: Activate OK
+  name: courier activation
   type: http
-  seq: 4
+  seq: 5
 
 http:
   method: POST
   url: "{{baseUrl}}/auth/activate"
   body:
     type: json
-    data: '{"token": "{{activationToken}}"}'
+    data: '{ "token": "{{activationToken}}" } '
   auth: inherit
 
 runtime:
+  scripts:
+    - type: before-request
+      code: bru.setVar("activationToken", bru.getEnvVar("activationToken").trim());
   assertions:
     - expression: res.status
       operator: eq
       value: "200"
     - expression: res.body.message
-      operator: eq
-      value: Account activated
+      operator: contains
+      value: waiting for admin approval
 
 settings:
   encodeUrl: true

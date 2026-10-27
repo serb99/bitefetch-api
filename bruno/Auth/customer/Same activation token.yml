@@ -1,0 +1,30 @@
+info:
+  name: Same activation token
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/auth/activate"
+  body:
+    type: json
+    data: '{"token": "{{activationToken}}"}'
+  auth: inherit
+
+runtime:
+  assertions:
+    - expression: res.status
+      operator: eq
+      value: "400"
+    - expression: res.body.error.code
+      operator: eq
+      value: INVALID_OR_EXPIRED_TOKEN
+    - expression: res.body.error.details
+      operator: isNull
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
