@@ -1,116 +1,129 @@
-import bcrypt from 'bcrypt';
+import { pool } from '../database/pool';
 import { withTransaction } from '../database/transaction';
-import { generateToken, hashToken } from '../utils/tokens';
+import bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
+import type { LoginInput } from "../schemas/loginSchema";
 import { AppError } from '../errors/AppError';
-import { DatabaseError, PoolClient } from 'pg';
-import type { CustomerSignupInput, OwnerSignupInput, CourierSignupInput } from '../schemas/authSchema';
+import type { AuthenticatedUser} from '../types/auth';
+import { generateToken, hashToken } from '../utils/tokens';
+import { signAccessToken } from '../utils/jwt';
+import { logger } from '../logger';
 
-interface CreatedUser{
-    id: string;
-    email: string;
+// A real bcrypt hash of a random string, computed once at startup. It matches no password.
+// When the email doesn't exist we still run bcrypt.compare against it, so a login with an
+// unknown email takes as long as one with a wrong password. Without it, response time would
+// reveal which emails are registered.
+const DUMMY_HASH = bcrypt.hashSync(randomUUID(), 12);
+const REFRESH_GRACE_MS = 10_000;
+
+interface Session {
+    accessToken: string;
+    refreshToken: string;
 }
 
-interface NewUserData{
-    email: string;
-    password: string;
-    fullName: string;
-    phone?: string;
-}
+const invalidRefreshToken = () => new AppError(401, 'INVALID_REFRESH_TOKEN', 'Invalid refresh token');
+const refreshRace = () => new AppError(409, 'REFRESH_IN_PROGRESS', 'Token was just refreshed, retry');
 
-type SignupRole = 'customer' | 'restaurant_owner' | 'courier';
+async function loginUser(input: LoginInput): Promise<AuthenticatedUser>{
+    const result = await pool.query(`SELECT id, role, status, password_hash from users
+        WHERE lower(email) = $1`, [input.email]);
+    const user = result.rows[0];
+    const hash = user?.password_hash ?? DUMMY_HASH;
+    const passwordOk = await bcrypt.compare(input.password, hash);
 
-async function registerAccount(
-    input: NewUserData,
-    role: SignupRole,
-    reason: string,
-    extra?: (client: PoolClient, user: CreatedUser) => Promise<void>,
-): Promise<CreatedUser> {
-
-    const passwordHash = await bcrypt.hash(input.password, 12);
-    const token = generateToken();
-    try {
-           const user = await withTransaction(async (client) => {
-                const userCreate = await createPendingUser(client, input, passwordHash, role, token);
-                if(extra){
-                    await extra(client, userCreate);
-                }
-                return userCreate;
-            }, 'system', reason);
-
-           console.log(`Activation link: http://localhost:3000/auth/activate?token=${token}`);
-           return user;
+    if (!user || !passwordOk) {
+        throw new AppError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
     }
-    catch(err){
-        if (err instanceof DatabaseError && err.code === '23505' && err.constraint === 'users_email_lower_uq'){
-            throw new AppError(409, 'EMAIL_TAKEN', 'An account with this email already exists');
-        }
-        throw err;
+    if (user.status !== 'active') {
+        throw new AppError(403, 'ACCOUNT_NOT_ACTIVE', 'Account is not active', { status: user.status });
     }
+
+    return { id: user.id, role: user.role };
 }
 
-async function createPendingUser(
-    client: PoolClient,
-    data: Omit<NewUserData, 'password'>,
-    passwordHash: string,
-    role: SignupRole,
-    token: string
-): Promise<CreatedUser> {
-    const insertUser = await client.query(`INSERT INTO users (email, password_hash, role, full_name, phone)
-               VALUES ($1, $2, $3, $4, $5) RETURNING id, email`, [data.email, passwordHash, role, data.fullName, data.phone ?? null]);
+async function startSession(user: AuthenticatedUser): Promise<Session>{
+    const familyId = randomUUID();
+    const refreshToken = generateToken();
+
+    await withTransaction(async (client) => {
+        await client.query(`INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+            VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')`, [user.id, hashToken(refreshToken), familyId]);
+        await client.query(`UPDATE users SET last_login_at = now() WHERE id = $1`, [user.id]);
+    }, `user:${user.id}`, 'login');
+
+    const accessToken = signAccessToken(user, familyId);
+    return { accessToken, refreshToken };
+}
+
+async function rotateSession(rawToken: string): Promise<Session>{
+    const tokenHash = hashToken(rawToken);
+    // Look up the presented token by its hash, together with its user (role, status) and, through a
+    // LEFT JOIN on the same table, the token that replaced it (replaced_at). All the checks below
+    // use this one row; it's undefined when the token is unknown.
+    const result = await pool.query(`SELECT rt.id, rt.user_id, rt.family_id, rt.expires_at, rt.revoked_at, rt.replaced_by_id,
+          u.role, u.status, nxt.created_at AS replaced_at
+          FROM refresh_tokens rt
+          JOIN users u ON u.id = rt.user_id
+          LEFT JOIN refresh_tokens nxt ON nxt.id = rt.replaced_by_id
+          WHERE rt.token_hash = $1`, [tokenHash]);
+    const storedToken = result.rows[0];
+
+    if(!storedToken){
+        throw invalidRefreshToken();
+    }
+    if(storedToken.revoked_at){
+        throw invalidRefreshToken();
+    }
+    if(storedToken.replaced_by_id){
+        // How long ago was this token replaced? replaced_at is the creation time of the token that took
+        // its place (a Date from pg), so "now - replaced_at" is the time since the rotation, in ms.
+        // If it's under the grace window, this is most likely a second request that raced the first
+        // (two tabs, a double effect, a retry) and not a stolen token, so we don't revoke the family.
+        const withinGrace = Date.now() - storedToken.replaced_at.getTime() < REFRESH_GRACE_MS;
+        if(withinGrace) {
+            throw refreshRace();
+        }
+        //otherwise
+        //stale or stolen refresh token
+        //revoke the whole family
+        await pool.query(`UPDATE refresh_tokens set revoked_at = now() 
+            WHERE family_id = $1 AND revoked_at IS NULL`, [storedToken.family_id]);
+        logger.warn({ userId: storedToken.user_id, familyId: storedToken.family_id }, 'Refresh token reuse detected');
+        throw invalidRefreshToken();
+    }
+    if(storedToken.expires_at <= new Date()){
+        throw invalidRefreshToken();
+    }
+    if(storedToken.status !== 'active'){
+        throw invalidRefreshToken();
+    }
     
-    const user = insertUser.rows[0];
+    const newRefreshToken = generateToken();
+    const session = await withTransaction(async (client) => {
+        const inserted = await client.query(`INSERT INTO refresh_tokens (user_id, token_hash, family_id, expires_at)
+                VALUES ($1, $2, $3, NOW() + INTERVAL '30 days') RETURNING id`, 
+                [storedToken.user_id, hashToken(newRefreshToken), storedToken.family_id]);
+        const claim = await client.query(`UPDATE refresh_tokens SET replaced_by_id = $1 
+                WHERE id = $2 AND replaced_by_id IS NULL AND revoked_at IS NULL`, 
+               [inserted.rows[0].id, storedToken.id]);
 
-    await client.query(`INSERT INTO email_tokens (user_id, type, token_hash, expires_at)
-            VALUES ($1, 'activation', $2, NOW() + INTERVAL '24 hours')`, [user.id, hashToken(token)]);
-    
-    return user;
-}
-
-async function signupCustomer(input: CustomerSignupInput){
-    return registerAccount(input, 'customer', 'customer signup');
-}
-
-async function signupOwner(input: OwnerSignupInput){
-    return registerAccount(input, 'restaurant_owner', 'owner signup', 
-        async (client, user) => {
-            await client.query(`INSERT INTO applications (user_id, role, details, restaurant_id)
-                VALUES ($1, 'restaurant_owner', $2, $3)`, [user.id, 
-                { restaurantName: input.restaurantName, restaurantAddress: input.restaurantAddress }, input.restaurantId ?? null]);
+        if (claim.rowCount === 0) {
+            throw refreshRace();
         }
-    )
-}
-
-async function signupCourier(input: CourierSignupInput){
-    return registerAccount(input, 'courier', 'courier signup',
-        async (client, user) => {
-            await client.query(`INSERT INTO applications (user_id, role, details)
-                VALUES ($1, 'courier', $2)`,[user.id, { vehicleType: input.vehicleType }]);
-        });
-}
-
-async function activateAccount(token: string): Promise<string>{
-    const tokenHash = hashToken(token);
-
-    return await withTransaction(async (client) => {
-        const setEmailTokenUsage = await client.query(`UPDATE email_tokens SET used_at = now() 
-             WHERE token_hash = $1 AND type = 'activation' AND used_at IS NULL 
-             AND revoked_at IS NULL AND expires_at > now() RETURNING user_id`, [tokenHash]);
-
-        if(setEmailTokenUsage.rows.length === 0) {
-            throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Activation link is invalid or has expired');
-        }
-
-        const activated = await client.query(`UPDATE users SET status = CASE WHEN role = 'customer' 
-                                                  THEN 'active'::user_status
-                                                  ELSE 'pending_approval'::user_status END,
-            email_verified_at = now() WHERE id = $1 AND status = 'pending_activation' RETURNING status`, [setEmailTokenUsage.rows[0].user_id]);
+        const accessToken = signAccessToken({id: storedToken.user_id, role: storedToken.role}, storedToken.family_id);
         
-        if(activated.rows.length === 0){
-            throw new AppError(400, 'INVALID_OR_EXPIRED_TOKEN', 'Activation link is invalid or has expired');
-        }
-        
-        return activated.rows[0].status;
-    }, 'system', 'account activation');
+        return { accessToken, refreshToken: newRefreshToken };
+    }, `user:${storedToken.user_id}`, 'token refresh');
+
+    return session;
 }
 
-export { signupCustomer, signupOwner, signupCourier, activateAccount };
+async function endSession(rawToken: string): Promise<void>{
+    await pool.query(
+        `UPDATE refresh_tokens SET revoked_at = now()
+                WHERE family_id = (SELECT family_id FROM refresh_tokens WHERE token_hash = $1)
+         AND revoked_at IS NULL`, [hashToken(rawToken)]
+    );
+}
+
+export { loginUser, startSession, rotateSession, endSession };
