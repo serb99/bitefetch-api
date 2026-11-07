@@ -48,8 +48,8 @@ function logout(token?: string) {
     return token === undefined ? req : req.set('Cookie', `refreshToken=${token}`);
 }
 
-// Links are printed with console.log (mocked in setupDb.ts). Read the token of the latest one.
-const ACTIVATION_LINK = /Activation link: \S*[?&]token=([A-Za-z0-9_-]+)/;
+// Read the token of the latest one.
+const ACTIVATION_LINK = /Activation link: \S*#token=([A-Za-z0-9_-]+)/;
 const RESET_LINK = /Password reset link: \S*#token=([A-Za-z0-9_-]+)/;
 
 function printedTokens(pattern: RegExp): string[] {

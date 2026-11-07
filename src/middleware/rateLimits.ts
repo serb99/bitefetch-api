@@ -37,3 +37,4 @@ const emailKey: Options['keyGenerator'] = (req) =>
 export const signupLimiter = limiter(HOUR, 5);
 export const loginLimiter = limiter(MINUTE, 5, ipAndEmailKey);
 export const passwordResetLimiter = limiter(HOUR, 3, emailKey);
+export const osmSearchLimiter = limiter(60 * 1000, 20);

@@ -2,7 +2,7 @@
 module.exports = {
     testEnvironment: 'node',
     // Only the new integration tests. The old Phase 2 tests are not picked up.
-    testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
+    testMatch: ['<rootDir>/tests/integration/**/*.test.ts', '<rootDir>/tests/unit/**/*.test.ts'],
     transform: {
         '^.+\\.ts$': ['@swc/jest', {
             jsc: { parser: { syntax: 'typescript' }, target: 'es2022' },

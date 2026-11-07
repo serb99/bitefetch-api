@@ -4,6 +4,7 @@ import { generateToken, hashToken } from '../utils/tokens';
 import { AppError } from '../errors/AppError';
 import { DatabaseError, PoolClient } from 'pg';
 import type { CustomerSignupInput, OwnerSignupInput, CourierSignupInput } from '../schemas/signupSchema';
+import { importOsmPlace, createManualRestaurant } from './restaurantImportService';
 
 interface CreatedUser{
     id: string;
@@ -37,7 +38,7 @@ async function registerAccount(
                 return userCreate;
             }, 'system', reason);
 
-           console.log(`Activation link: http://localhost:3000/auth/activate?token=${token}`);
+           console.log(`Activation link: ${process.env.FRONTEND_URL}/activate#token=${token}`);
            return user;
     }
     catch(err){
@@ -73,11 +74,30 @@ async function signupCustomer(input: CustomerSignupInput){
 async function signupOwner(input: OwnerSignupInput){
     return registerAccount(input, 'restaurant_owner', 'owner signup', 
         async (client, user) => {
-            await client.query(`INSERT INTO applications (user_id, role, details, restaurant_id)
-                VALUES ($1, 'restaurant_owner', $2, $3)`, [user.id, 
-                { restaurantName: input.restaurantName, restaurantAddress: input.restaurantAddress }, input.restaurantId ?? null]);
+            // 1. if osmId is set, then import the chosen place (takes the lock, returns { id, brandId })
+            //    otherwise create manually a restaurant with private brand
+            const { id: restaurantId } = input.osmId
+                ? await importOsmPlace(client, input.osmId)
+                : await createManualRestaurant(client, input.manualRestaurant!);
+
+            // 2. someone else already waiting for approval on this restaurant?
+            const pending = await client.query(
+                `SELECT 1 FROM applications WHERE restaurant_id = $1 AND status = 'pending'`,
+                [restaurantId]
+            );
+            if (pending.rows[0]) {
+                throw new AppError(409, 'RESTAURANT_ALREADY_CLAIMED',
+                    'Another owner has already applied for this restaurant');
+            }
+
+            //3. insert in applications
+            await client.query(
+                `INSERT INTO applications (user_id, role, details, restaurant_id)
+                 VALUES ($1, 'restaurant_owner', $2::jsonb, $3)`,
+                 [user.id, JSON.stringify({ openingHours: input.openingHours }), restaurantId]
+            );
         }
-    )
+    );
 }
 
 async function signupCourier(input: CourierSignupInput){

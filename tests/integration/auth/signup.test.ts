@@ -14,8 +14,8 @@ const customerBody = (overrides: Record<string, unknown> = {}) => ({
 
 const ownerBody = (overrides: Record<string, unknown> = {}) => customerBody({
     email: 'owner@example.com',
-    restaurantName: 'Casa Ana',
-    restaurantAddress: 'Strada Lunga 1, Brasov',
+    manualRestaurant: { name: 'Casa Ana', address: 'Strada Lunga 1, Brasov', lat: 45.6427, lng: 25.5887 },
+    openingHours: { mon: [['10:00', '22:00']] },
     ...overrides,
 });
 
@@ -154,40 +154,35 @@ describe('POST /restaurant-owners', () => {
             `SELECT role, status, details, restaurant_id, attempt_no, decided_at FROM applications WHERE user_id = $1`,
             [res.body.user.id]);
         expect(rows).toEqual([{
-            role: 'restaurant_owner', status: 'pending', restaurant_id: null, attempt_no: 1, decided_at: null,
-            details: { restaurantName: 'Casa Ana', restaurantAddress: 'Strada Lunga 1, Brasov' },
+            role: 'restaurant_owner', status: 'pending', restaurant_id: expect.any(String), attempt_no: 1, decided_at: null,
+            details: { openingHours: { mon: [['10:00', '22:00']] } },
         }]);
         expect(printedActivationTokens()).toHaveLength(1);
     });
 
     it('requires the restaurant name and address', async () => {
         const res = await api().post('/restaurant-owners')
-            .send(ownerBody({ restaurantName: undefined, restaurantAddress: '' }));
+            .send(ownerBody({ manualRestaurant: { address: '', lat: 45.6, lng: 25.6 } }));
 
         expect(res.status).toBe(400);
         expect(res.body.error.code).toBe('VALIDATION_ERROR');
         const fields = res.body.error.details.map((d: { field: string }) => d.field);
-        expect(fields).toEqual(expect.arrayContaining(['restaurantName', 'restaurantAddress']));
+        expect(fields).toEqual(expect.arrayContaining(['manualRestaurant.name', 'manualRestaurant.address']));
     });
 
-    it('rejects a non-numeric restaurantId with 400', async () => {
-        const res = await api().post('/restaurant-owners').send(ownerBody({ restaurantId: '12abc' }));
+    it('requires the opening hours', async () => {
+        const res = await api().post('/restaurant-owners').send(ownerBody({ openingHours: undefined }));
 
         expect(res.status).toBe(400);
-        expect(res.body.error.details).toEqual([expect.objectContaining({ field: 'restaurantId' })]);
+        expect(res.body.error.details).toEqual([expect.objectContaining({ field: 'openingHours' })]);
     });
 
-    it('rolls back the whole signup when the picked restaurant does not exist (409 REFERENCE_VIOLATION)', async () => {
-        const res = await api().post('/restaurant-owners').send(ownerBody({ restaurantId: '999999' }));
+    it('rolls back the whole signup when the picked OSM place is unknown (404 PLACE_NOT_FOUND)', async () => {
+        const res = await api().post('/restaurant-owners')
+            .send(ownerBody({ manualRestaurant: undefined, osmId: 'node/999999' }));
 
-        expect(res.status).toBe(409);
-        expect(res.body).toEqual({
-            error: {
-                code: 'REFERENCE_VIOLATION',
-                message: 'Related resource missing or in use',
-                details: { constraint: 'applications_restaurant_id_fkey' },
-            },
-        });
+        expect(res.status).toBe(404);
+        expect(res.body.error.code).toBe('PLACE_NOT_FOUND');
         // Same transaction: no user, no token, no application, and no link printed.
         expect(await countRows('users')).toBe(0);
         expect(await countRows('email_tokens')).toBe(0);

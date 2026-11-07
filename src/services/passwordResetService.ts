@@ -38,7 +38,7 @@ async function requestPasswordReset(input: RequestResetInput): Promise<void>{
     }, 'system', 'password reset requested');
 
     // Development only: there's no mailer yet, so print the link.
-    console.log(`Password reset link: http://localhost:5173/reset-password#token=${token}`);
+    console.log(`Password reset link: ${process.env.FRONTEND_URL}/reset-password#token=${token}`);
 }
 
 async function confirmPasswordReset(input: ConfirmResetInput): Promise<void>{

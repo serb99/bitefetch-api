@@ -35,7 +35,7 @@ exports.up = (pgm) => {
     subtotal_minor: { type: 'int', notNull: true },
     delivery_fee_minor: { type: 'int', notNull: true },
     total_minor: { type: 'int', notNull: true },
-    currency: { type: 'char(3)', notNull: true, default: 'EURO' },
+    currency: { type: 'char(3)', notNull: true, default: 'EUR' },
     delivery_distance_m: { type: 'int', notNull: true }, // route distance at checkout; drives the delivery fee
     delivery_address_snapshot: { type: 'jsonb', notNull: true }, // label, street, details, city, lat, lng at checkout
     delivery_lat: { type: 'float8', notNull: true },

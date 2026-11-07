@@ -50,7 +50,7 @@ exports.up = (pgm) => {
     name: { type: 'varchar(200)', notNull: true },
     description: { type: 'text' },
     price_minor: { type: 'int', notNull: true },
-    currency: { type: 'char(3)', notNull: true, default: 'EURO' },
+    currency: { type: 'char(3)', notNull: true, default: 'EUR' },
     category: { type: 'varchar(100)' },
     sort_order: { type: 'int', notNull: true, default: 0 },
     image_url: { type: 'varchar(1000)' },
