@@ -10,6 +10,10 @@ import { ownerMenuRoutes } from './routes/ownerMenuRoutes';
 import { ownerRestaurantRoutes } from './routes/ownerRestaurantRoutes';
 import { restaurantRoutes } from './routes/restaurantRoutes';
 import { osmRoutes } from './routes/osmRoutes';
+import { meRoutes } from './routes/meRoutes';
+import { addressRoutes } from './routes/addressRoutes';
+import { cartRoutes } from './routes/cartRoutes';
+import { orderRoutes } from './routes/orderRoutes';
 
 const app = express();
 
@@ -27,6 +31,10 @@ app.use('/owner/menu-items', ownerMenuRoutes);
 app.use('/owner/restaurant', ownerRestaurantRoutes);
 app.use('/restaurants', restaurantRoutes);
 app.use('/osm', osmRoutes);
+app.use('/me', meRoutes);
+app.use('/addresses', addressRoutes);
+app.use('/cart', cartRoutes);
+app.use('/orders', orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

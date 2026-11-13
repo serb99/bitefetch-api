@@ -14,8 +14,15 @@ async function assertTestDatabase(): Promise<void> {
 // The catalog tables go first: restaurants.owner_id and applications.restaurant_id are
 // ON DELETE RESTRICT, so users cannot be deleted while a restaurant or application points at them.
 // Deleting restaurants cascades to restaurant_item_availability.
+// M4: orders and their children are RESTRICT on every side (orders are never deleted in the app),
+// so they go before restaurants and users. Deleting users cascades to delivery_addresses and carts,
+// and carts cascade to cart_items.
 async function resetAccountTables(): Promise<void> {
     await pool.query(`
+        DELETE FROM order_status_history;
+        DELETE FROM order_items;
+        DELETE FROM orders;
+        DELETE FROM route_cache;
         DELETE FROM osm_search_cache;
         DELETE FROM applications;
         DELETE FROM restaurants;

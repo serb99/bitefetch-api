@@ -9,3 +9,5 @@ process.env.RATE_LIMIT_DISABLED = 'true';
 process.env.FRONTEND_URL = 'http://localhost:8080';
 // No 1.1 s gap between (mocked) Nominatim calls; osmSearch.test.ts checks the throttle separately.
 process.env.OSM_MIN_GAP_MS = '0';
+// Same for the (mocked) OSRM routing calls.
+process.env.OSRM_MIN_GAP_MS = '0';

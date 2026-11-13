@@ -38,7 +38,7 @@ type NearbyRow = {
     distance_km: number;
 };
 
-function isOrderable(
+export function isOrderable(
     r: { is_open: boolean; paused_until: Date | null; opening_hours: OpeningHours | null },
     now: Date,
 ): boolean {
