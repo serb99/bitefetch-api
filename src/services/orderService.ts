@@ -1,5 +1,6 @@
 import { pool } from '../database/pool';
 import { AppError } from '../errors/AppError';
+import { getNumberSettings } from './settingsService';
 
 type OrderItemView = {
     menuItemId: string | null;     // null if the menu item was ever hard-deleted
@@ -32,10 +33,14 @@ type OrderView = {
     deliveryDistanceM: number;
     deliveryAddress: DeliveryAddressSnapshot;
     paymentExpiresAt: Date;
+    paymentAttempts: number;          // declined card attempts so far
+    maxPaymentAttempts: number;      // from platform_settings: at this number the order expires
+    lastPaymentError: string | null;  // Stripe's message for the last decline, written for the customer
+    cancelReason: string | null;      // why it ended: payment_window, too_many_attempts, abandoned_checkout...
     createdAt: Date;
 };
 
-type OrderRow = Omit<OrderView, 'restaurant' | 'items'> & {
+type OrderRow = Omit<OrderView, 'restaurant' | 'items' | 'maxPaymentAttempts'> & {
     restaurantId: string;
     restaurantName: string;
 };
@@ -52,6 +57,8 @@ type OrderSummary = {
 };
 
 async function getCustomerOrder(customerId: string, orderId: string): Promise<OrderView> {
+    const settings = await getNumberSettings(['max_payment_attempts'] as const);
+
     const orderResult = await pool.query<OrderRow> (
         `SELECT o.id,
                 o.order_code AS "orderCode",
@@ -66,6 +73,9 @@ async function getCustomerOrder(customerId: string, orderId: string): Promise<Or
                 o.delivery_distance_m AS "deliveryDistanceM",
                 o.delivery_address_snapshot AS "deliveryAddress",
                 o.payment_expires_at AS "paymentExpiresAt",
+                o.payment_attempts AS "paymentAttempts",
+                o.last_payment_error AS "lastPaymentError",
+                o.cancel_reason AS "cancelReason",
                 o.created_at AS "createdAt"
             FROM orders o
             JOIN restaurants r ON r.id = o.restaurant_id
@@ -92,6 +102,7 @@ async function getCustomerOrder(customerId: string, orderId: string): Promise<Or
     const { restaurantId, restaurantName, ...order } = row;
     return {
         ...order,
+        maxPaymentAttempts: settings.max_payment_attempts,
         restaurant: { id: restaurantId, name: restaurantName },
         items: itemsResult.rows
     };

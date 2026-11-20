@@ -7,8 +7,10 @@ import { getNumberSettings } from './settingsService';
 import { getCustomerOrder, type OrderView } from './orderService';
 import { generateOrderCode } from '../utils/orderCode';
 import type { OpeningHours } from '../utils/openingHours';
+import { ensurePaymentIntent } from './paymentService';
+import { logger } from '../logger';
 
-type CheckoutResult = { order: OrderView; created: boolean };
+type CheckoutResult = { order: OrderView; created: boolean; clientSecret: string | null };
 
 type LineRow = {
     menuItemId: string;
@@ -194,8 +196,18 @@ async function createOrder(
         return { orderId, created: true };
     }, `user:${customerId}`, 'checkout');
 
+    // After COMMIT: the order exists no matter what Stripe does now.
+    // A Stripe failure does not fail the checkout: the order page asks for the payment again.
+    let clientSecret: string | null = null;
+    try {
+        const payment = await ensurePaymentIntent(outcome.orderId, customerId);
+        clientSecret = payment?.clientSecret ?? null;
+    } catch (err) {
+        logger.warn({ err, orderId: outcome.orderId }, 'No PaymentIntent at checkout; the order page will retry');
+    }
+
     const order = await getCustomerOrder(customerId, outcome.orderId);
-    return { order, created: outcome.created };
+    return { order, created: outcome.created, clientSecret };
 }
 
 export { createOrder };

@@ -4,6 +4,8 @@ import { idempotencyKeySchema } from '../schemas/checkoutSchema';
 import { createOrder } from '../services/checkoutService';
 import { listCustomerOrders, getCustomerOrder } from '../services/orderService';
 import { listOrdersQuerySchema } from '../schemas/orderSchema';
+import { ensurePaymentIntent } from '../services/paymentService'
+import { cancelPendingOrder } from '../services/orderCancelService';
 
 async function createOrderHandler(req: Request, res: Response) {
     // the key travels in a header, not in the body
@@ -12,8 +14,8 @@ async function createOrderHandler(req: Request, res: Response) {
         throw new AppError(400, 'VALIDATION_ERROR', 'The Idempotency-Key header is required (1 to 100 characters)');
     }
 
-    const { order, created } = await createOrder(req.user!.id, key.data, req.body.expectedTotalMinor);
-    res.status(created ? 201 : 200).json(order);
+    const { order, created, clientSecret } = await createOrder(req.user!.id, key.data, req.body.expectedTotalMinor);
+    res.status(created ? 201 : 200).json({ ...order, clientSecret });
 }
 
 async function listOrdersHandler(req: Request, res: Response) {
@@ -29,4 +31,16 @@ async function getOrderHandler(req: Request<{ id: string }>, res: Response) {
     res.json(await getCustomerOrder(req.user!.id, req.params.id));
 }
 
-export { createOrderHandler, listOrdersHandler, getOrderHandler};
+async function getOrderPaymentHandler(req: Request<{ id: string }>, res: Response) {
+     const payment = await ensurePaymentIntent(req.params.id, req.user!.id);
+     if (!payment) {
+        throw new AppError(409, 'ORDER_NOT_PAYABLE', 'This order is not waiting for payment anymore');
+     }
+     res.json({ clientSecret: payment.clientSecret });
+}
+
+async function cancelOrderHandler(req: Request<{ id: string }>, res: Response) {
+    res.json(await cancelPendingOrder(req.user!.id, req.params.id));
+}
+
+export { createOrderHandler, listOrdersHandler, getOrderHandler, getOrderPaymentHandler, cancelOrderHandler };

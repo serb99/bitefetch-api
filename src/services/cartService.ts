@@ -282,5 +282,40 @@ async function setCartAddress(customerId: string, addressId: string): Promise<Ca
     return getCartView(customerId);
 }
 
-export { getCartView, setCartItem, removeCartItem, clearCart, setCartAddress, getOrCreateCart };
+// puts an ended order's items back in the cart, but only into an EMPTY cart:
+// never mix them into a cart the customer has already started again.
+async function restoreCartFromOrder(
+    client: PoolClient,
+    customerId: string,
+    orderId: string,
+    restaurantId: string
+): Promise<void> {
+    const cart = await getOrCreateCart(client, customerId);
+
+    const existing = await client.query(`SELECT 1 FROM cart_items WHERE cart_id = $1 LIMIT 1`, [cart.id]);
+    if ((existing.rowCount ?? 0) > 0) {
+        return;
+    }
+
+    // The cart must have its restaurant BEFORE the items: the cart_items_brand_check trigger
+    // refuses items in a cart without a restaurant (checkout left it NULL).
+    await client.query(`UPDATE carts SET restaurant_id = $2 WHERE id = $1`, [cart.id, restaurantId]);
+
+    // menu_item_id is NULL when the item was hard-deleted since checkout: skip it.
+    // Unavailable items do come back: the cart view marks them available: false and checkout refuses them.
+    const inserted = await client.query(
+        `INSERT INTO cart_items (cart_id, menu_item_id, quantity)
+         SELECT $1, menu_item_id, quantity
+           FROM order_items
+          WHERE order_id = $2 AND menu_item_id IS NOT NULL
+         ON CONFLICT (cart_id, menu_item_id) DO NOTHING`,
+        [cart.id, orderId]
+    );
+    // Nothing came back (every item was deleted since): an empty cart has no restaurant.
+    if ((inserted.rowCount ?? 0) === 0) {
+        await client.query(`UPDATE carts SET restaurant_id = NULL WHERE id = $1`, [cart.id]);
+    }
+}
+
+export { getCartView, setCartItem, removeCartItem, clearCart, setCartAddress, getOrCreateCart, restoreCartFromOrder };
 export type { CartView, CartRow };

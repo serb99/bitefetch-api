@@ -14,7 +14,8 @@ module.exports = {
     // Env vars must be set before src/ is imported (pool, jwt and logger read them at load time).
     setupFiles: ['<rootDir>/tests/helpers/env.ts'],
     // Cleans the account tables before each test and closes the pool after each file.
-    setupFilesAfterEnv: ['<rootDir>/tests/helpers/setupDb.ts'],
+    // Replaces the Stripe client with an in-memory fake in every test file (M5).
+    setupFilesAfterEnv: ['<rootDir>/tests/helpers/setupDb.ts', '<rootDir>/tests/helpers/stripeMock.ts'],
     // All files share one database: never run them in parallel.
     maxWorkers: 1,
 };

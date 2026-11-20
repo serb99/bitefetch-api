@@ -11,3 +11,7 @@ process.env.FRONTEND_URL = 'http://localhost:8080';
 process.env.OSM_MIN_GAP_MS = '0';
 // Same for the (mocked) OSRM routing calls.
 process.env.OSRM_MIN_GAP_MS = '0';
+// Stripe is faked in tests (tests/helpers/stripeMock.ts). These only make sure that nothing can reach
+// the real sandbox even if the mock were missing, and that the webhook secret is the test one.
+process.env.STRIPE_SECRET_KEY = 'sk_test_never_used';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_bitefetch';

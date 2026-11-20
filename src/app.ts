@@ -14,11 +14,13 @@ import { meRoutes } from './routes/meRoutes';
 import { addressRoutes } from './routes/addressRoutes';
 import { cartRoutes } from './routes/cartRoutes';
 import { orderRoutes } from './routes/orderRoutes';
+import { webhookRoutes } from './routes/webhookRoutes';
 
 const app = express();
 
 app.set('trust proxy', 1);
 app.use(requestLogger);
+app.use('/webhooks', webhookRoutes); // the webhooks need raw body for signature computation so must come before the express.json
 app.use(express.json());
 app.use(cookieParser());
 

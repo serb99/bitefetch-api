@@ -17,8 +17,13 @@ async function assertTestDatabase(): Promise<void> {
 // M4: orders and their children are RESTRICT on every side (orders are never deleted in the app),
 // so they go before restaurants and users. Deleting users cascades to delivery_addresses and carts,
 // and carts cascade to cart_items.
+// M5: outbox and stripe_events have no foreign keys, but old rows would leak into the next test
+// (the outbox runner would pick them up). order_incidents points at orders (RESTRICT), so it goes first.
 async function resetAccountTables(): Promise<void> {
     await pool.query(`
+        DELETE FROM outbox;
+        DELETE FROM stripe_events;
+        DELETE FROM order_incidents;
         DELETE FROM order_status_history;
         DELETE FROM order_items;
         DELETE FROM orders;
