@@ -30,7 +30,7 @@ const COLUMN_BY_FIELD = {
 } as const;
 
 // after this many consecutive accept timeouts the worker pauses the restaurant
-const AUTO_PAUSE_TIMEOUTS = 2;
+export const AUTO_PAUSE_TIMEOUTS = 2;
 
 async function getOwnerRestaurant(ownerId: string): Promise<RestaurantRow> {
     const { rows } = await pool.query<RestaurantRow>(

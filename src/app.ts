@@ -15,6 +15,7 @@ import { addressRoutes } from './routes/addressRoutes';
 import { cartRoutes } from './routes/cartRoutes';
 import { orderRoutes } from './routes/orderRoutes';
 import { webhookRoutes } from './routes/webhookRoutes';
+import { ownerOrderRoutes } from './routes/ownerOrderRoutes';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/password-reset-confirmations', passwordResetConfirmationRoutes);
 
 app.use('/owner/menu-items', ownerMenuRoutes);
 app.use('/owner/restaurant', ownerRestaurantRoutes);
+app.use('/owner/orders', ownerOrderRoutes);
 app.use('/restaurants', restaurantRoutes);
 app.use('/osm', osmRoutes);
 app.use('/me', meRoutes);

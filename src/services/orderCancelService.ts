@@ -1,61 +1,44 @@
 import { withTransaction } from '../database/transaction';
-import { AppError } from '../errors/AppError';
 import { queuePaymentVoid } from './outbox';
 import { getCustomerOrder, type OrderView } from './orderService';
 import { restoreCartFromOrder } from './cartService';
+import { lockOrder, assertStatus } from './orderTransition';
 
-type CancelOrderRow = {
-    id: string;
-    status: string;
-    cancelReason: string | null;
-    restaurantId: string;
-    paymentIntentId: string | null;
-}
-
-// the customer leaves checkout. pending_payment → cancelled, void queued, cart given back.
-async function cancelPendingOrder(customerId: string, orderId: string): Promise<OrderView> {
+// The customer cancels their own order.
+// pending_payment → cancelled: left checkout; the cart comes back so they can try again.
+// placed → cancelled: paid but changed their mind before the restaurant accepted; the hold is released.
+// From accepted on, only support can cancel
+async function cancelCustomerOrder(customerId: string, orderId: string): Promise<OrderView> {
     await withTransaction(async (client) => {
-        const { rows } = await client.query<CancelOrderRow>(
-            `SELECT id,
-                    status,
-                    cancel_reason AS "cancelReason",
-                    restaurant_id AS "restaurantId",
-                    stripe_payment_intent_id AS "paymentIntentId"
-               FROM orders
-              WHERE id = $1 AND customer_id = $2
-              FOR UPDATE`,
-              [orderId, customerId]
-        );
-        const order = rows[0];
-        if (!order) {
-            throw new AppError(404, 'ORDER_NOT_FOUND', 'Order not found');
-        }
-        if (order.status === 'cancelled' && order.cancelReason === 'abandoned_checkout') {
-            return ;
-        }
-        if (order.status !== 'pending_payment') {
-            throw new AppError(409, 'ORDER_NOT_CANCELLABLE', 'This order can no longer be cancelled', { status: order.status });
-        }
+        const order = await lockOrder(client, orderId, { customerId });
 
-         await client.query(
+        if (order.status === 'cancelled' && order.cancelledBy === 'customer') {
+            return;
+        }
+        assertStatus(order, ['pending_payment', 'placed'], 'ORDER_NOT_CANCELLABLE', 'This order can no longer be cancelled');
+
+        const wasPlaced = order.status === 'placed';
+        await client.query(
             `UPDATE orders
                 SET status = 'cancelled',
                     cancelled_by = 'customer',
-                    cancel_reason = 'abandoned_checkout',
+                    cancel_reason = $2,
                     ended_at = now(),
                     version = version + 1
               WHERE id = $1`,
-              [order.id]
-         );
-
-         // No PaymentIntent (Stripe was down at checkout) - nothing is held on the card, nothing to void
-         if (order.paymentIntentId){
+            [order.id, wasPlaced ? 'customer_cancelled' : 'abandoned_checkout']
+        );
+        
+        // No PaymentIntent (Stripe was down at checkout): nothing on the card, nothing to void.
+        if (order.paymentIntentId) {
             await queuePaymentVoid(client, order.id, order.paymentIntentId);
-         }
-         await restoreCartFromOrder(client, customerId, order.id, order.restaurantId);
-    }, `user:${customerId}`, 'cancel order (abandoned checkout)');
+        }
+        if (!wasPlaced) {
+            await restoreCartFromOrder(client, customerId, order.id, order.restaurantId);
+        }
+    }, `user:${customerId}`, 'cancelled by the customer');
 
     return getCustomerOrder(customerId, orderId);
 }
 
-export { cancelPendingOrder };
+export { cancelCustomerOrder };

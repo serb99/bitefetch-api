@@ -1,6 +1,7 @@
 import { logger } from '../logger';
 import { processPaymentOutbox } from '../services/paymentOutbox';
 import { expirePendingPayments } from '../services/paymentExpiry';
+import { rejectTimedOutOrders } from '../services/acceptTimeout';
 
 const TICK_MS = 5_000;
 
@@ -15,9 +16,10 @@ function startPaymentJobs(): void {
         running = true;
         try {
             const expired = await expirePendingPayments();
+            const rejected = await rejectTimedOutOrders();
             const done = await processPaymentOutbox();
-            if (expired > 0 || done > 0) {
-                logger.info({ expired, done }, 'Payment jobs pass');
+            if (expired > 0 || rejected > 0 || done > 0) {
+                logger.info({ expired, rejected, done }, 'Payment jobs pass');
             }
         } catch (err) {
             logger.error({ err }, 'Payment jobs tick failed');

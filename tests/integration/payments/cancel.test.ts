@@ -82,15 +82,17 @@ describe('T5: POST /orders/:id/cancel while pending_payment', () => {
 });
 
 describe('T5: refusals', () => {
-    it('409 ORDER_NOT_CANCELLABLE once the order is placed (details.status)', async () => {
+    // M6 changed this: once placed, the same endpoint is T9 (customer_cancelled, no cart restore).
+    // The 409 ORDER_NOT_CANCELLABLE cases moved to accepted / ready_for_pickup: restaurantOrders/customerCancel.test.ts.
+    it('once placed it is no longer T5: cancelled as customer_cancelled, and the cart stays empty', async () => {
         const { order, customer, piId } = await pendingOrder();
         await authorize(order.id, piId);
 
         const res = await cancel(order.id, customer.headers);
 
-        expect(res.status).toBe(409);
-        expect(res.body.error).toMatchObject({ code: 'ORDER_NOT_CANCELLABLE', details: { status: 'placed' } });
-        expect((await orderRow(order.id)).status).toBe('placed');
+        expect(res.status).toBe(200);
+        expect((await orderRow(order.id)).cancel_reason).toBe('customer_cancelled');
+        expect(await cartLines(customer)).toEqual([]);
     });
 
     it('404 for another customer\'s order, 401 without a login, 400 for a bad id', async () => {
