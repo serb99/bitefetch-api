@@ -3,3 +3,4 @@ node_modules/
 docs/design/implementation-plan.md
 .vscode/settings.json
 dist/
+.claude/worktrees/
