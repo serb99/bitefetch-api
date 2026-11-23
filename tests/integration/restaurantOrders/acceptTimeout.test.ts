@@ -7,7 +7,7 @@ import {
     passAcceptDeadline, incidents, historyWithReason,
 } from '../../helpers/restaurantOrders';
 
-// T8: the 5 s job (jobs/paymentJobs.ts) calls rejectTimedOutOrders(). No timer runs in tests,
+// T8: the worker's 5 s 'accept-timeout' job (jobs/jobList.ts) calls rejectTimedOutOrders(). No timer runs in tests,
 // so the sweep is called directly, like the expiry sweep in payments/expiry.test.ts.
 
 const DAY = 24 * 60 * 60_000;

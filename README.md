@@ -14,16 +14,20 @@ npm run seed                  # seed accounts, password Password123!
 
 Test database: set `DB_NAME_TEST`, then `npm run migrate:test:up`.
 
-## Running locally (4 processes)
+## Running locally (5 processes)
 
 | # | Where | Command | Port |
 |---|---|---|---|
-| 1 | bitefetch-api | `npm run dev` | 3000 |
-| 2 | bitefetch-web | `npm run dev` | 5173 |
-| 3 | nginx | `nginx -c <full path to>\deploy\nginx\dev.conf` | 8080 |
-| 4 | bitefetch-api | `stripe listen ...` (see below) | — |
+| 1 | bitefetch-api | `npm run dev` (HTTP only) | 3000 |
+| 2 | bitefetch-api | `npm run worker` (time-based jobs) | — |
+| 3 | bitefetch-web | `npm run dev` | 5173 |
+| 4 | nginx | `nginx -c <full path to>\deploy\nginx\dev.conf` | 8080 |
+| 5 | bitefetch-api | `stripe listen ...` (see below) | — |
 
-Open http://localhost:8080. The API also runs a timer every 5 s (payment expiry + payment outbox: card voids and captures).
+Open http://localhost:8080. The worker (`src/worker.ts`, jobs in `src/jobs/jobList.ts`) runs everything time-based:
+payment expiry, accept timeout, the payment outbox (card voids and captures), dispatch (offers, offer expiry),
+Stripe reconciliation (lost webhooks), courier auto-offline and hourly retention. Without it no courier gets an offer,
+nothing expires and nothing is captured. Ctrl+C stops it cleanly (waits up to 10 s for running passes).
 
 ## Stripe (test mode)
 

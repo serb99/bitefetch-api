@@ -205,14 +205,52 @@ only (404), no migration and no new error codes, react-leaflet@5, OrderPage poll
   from the courier's current position, to_customer from the checkout cache, OSRM 500 → null, a 3 s OSRM → null at 2.5 s
   (the slow test waits for the late answer so it cannot leak into the next test). No src bugs found.
 
+## Done: M8 Worker service and sweepers (2026-11-23, code + 43 tests)
+Decisions A-I: separate process, one job runner, graceful shutdown, health log, reconciliation, auto-offline,
+settings cache, hourly retention. S6 no_courier stays in M9. Stayed TypeScript (the worker reuses the services).
+- The API (server.ts) starts NO timers any more. `npm run worker` → src/worker.ts: SELECT 1 (fail fast), starts every
+  job in src/jobs/jobList.ts, health log every 60 s (warn "Job looks stuck" when no pass finished for 5 intervals, min
+  1 min), SIGINT/SIGTERM → stop all jobs, wait ≤ 10 s, pool.end(), exit 0 (exit 1 on timeout).
+- jobs/jobRunner.ts startJob({name, everyMs, run}): setTimeout chain (next pass planned in finally, so passes never
+  overlap; everyMs counts from the END of a pass), first pass at once (schedule(0)), stats per job, stop() waits for
+  the running pass. jobs/paymentJobs.ts and jobs/dispatchJobs.ts were deleted.
+- jobList.ts: payment-expiry 5 s, accept-timeout 5 s, payment-outbox 5 s, dispatch 2 s (S4 then S1/S2),
+  payment-reconciliation 60 s, courier-auto-offline 15 s, retention 1 h.
+- settingsService: whole platform_settings table cached 10 s per process (lazy reload, one shared in-flight load,
+  a failed load is not cached); clearSettingsCache() (called in tests/helpers/setupDb.ts beforeEach).
+- paymentAuthorization.ts placeAuthorizedOrder(client, order, pi, acceptWindowS): T3 rules moved out of
+  webhookService.onAuthorized (late → void, not pending → skip, amount ≠ total → refuse, else placed + outbox
+  order.placed); returns the outcome. The caller locks the order and reads the setting before the lock.
+- paymentReconciliation.ts reconcilePendingPayments: ≤ 20 pending_payment orders with a PI older than
+  reconcile_after_s (no lock), paymentIntents.retrieve OUTSIDE any transaction (break on a Stripe error), then per
+  order a short transaction (FOR UPDATE SKIP LOCKED, id AND PI match): requires_capture → placeAuthorizedOrder,
+  canceled → expireOrder('payment_window'). Actor system:reconcile.
+- courierAutoOffline.ts setSilentCouriersOffline: ≤ 50 online active couriers with no position for
+  courier_no_position_offline_s (120) and NO active order (design note 17); per courier: users row FOR NO KEY UPDATE
+  SKIP LOCKED, UPDATE ... offline 'no_position' with the same SILENT_AND_FREE check under the lock, then
+  courierService.releasePendingOffer (extracted from goOffline: give back the pending offer + dispatchOrderNow).
+  Actor system:auto-offline. Gotcha: an unused $n parameter fails in Postgres ("could not determine data type").
+- retention.ts runRetention: SELECT * FROM run_retention() (SQL rules: outbox 7 d, stripe_events 30 d, tokens,
+  offers 12 months, expired caches, stale carts, audit 24 months, A4 never-activated users 7 d; 5000 rows per table
+  per call; drops order_status_history partitions > 12 months and creates the next 3).
+- Tests (43, helpers in tests/helpers/worker.ts: setSetting/restoreSettings because platform_settings is NOT reset
+  between tests, ageOrder): tests/unit/jobRunner (7, jest fake timers incl. Date; afterEach must advance fake time
+  while stop() waits for a slow pass), tests/integration/worker/: settingsCache (6), reconciliation (11: placed with
+  actor system:reconcile, canceled → expired + cart + one void, young/in-progress untouched, Stripe down stops the
+  pass, webhook + reconcile in parallel = one T3, max 20 oldest first), autoOffline (10: silent/no row/young,
+  offline or suspended untouched, active delivery in 3 statuses untouched, offer declined went_offline and the next
+  courier offered in the same pass, two passes = one offline), retention (3), outboxLease (3 = the DoD: worker died
+  before / after the Stripe call, two workers after the lease), jobList (1); dispatch/dispatchJobs rewritten (2, real
+  timers, the 'dispatch' entry of JOBS). Also re-ran payments + dispatch + restaurantOrders: 240 green.
+  No src bugs found by the tests (the unused-$1 bug in auto-offline was caught and fixed before them).
+
 ## Next
-1. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer).
-2. Run the full suite once (`npm test`): the M7 files and the M6 files passed separately, the shared reset helper changed.
-3. D1 passed (2026-11-23; fixed the simulator's headTo, which kept the whole restaurant object as a position).
-   The developer tags `d1-happy-path` and writes the "harder than planned" note in the tracker.
-4. M8.
+1. Run the full suite once (`npm test`).
+2. M9 Unhappy paths and incidents (includes S6 no_courier).
+3. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer). Dev now needs `npm run worker` too.
+4. D1 note "harder than planned" in the tracker (tag d1-happy-path is on 575e4e4, local only).
 5. Web for M6 (owner board) — the developer does it later.
-Known gaps left on purpose: reconciliation sweeper for lost webhooks (M8); live updates instead of polling (M10);
+Known gaps left on purpose: live updates instead of polling (M10);
 owner actions do not re-check users.status (stateless access token, like the other owner routes); T7 "mark ticked
 items unavailable" (review D1) not built; T10 ready does not kick dispatch (the 2 s timer picks it up); the S4 sweep
 does not kick dispatch either (the order's next_search_at already equals the offer's expires_at, so the next tick searches it).

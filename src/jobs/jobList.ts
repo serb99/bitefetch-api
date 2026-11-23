@@ -1,0 +1,33 @@
+import type { JobPass } from './jobRunner';
+import { expirePendingPayments } from '../services/paymentExpiry';
+import { rejectTimedOutOrders } from '../services/acceptTimeout';
+import { processPaymentOutbox } from '../services/paymentOutbox';
+import { expireTimedOutOffers } from '../services/offerTimeout';
+import { dispatchDueOrders } from '../services/dispatchService';
+import { reconcilePendingPayments } from '../services/paymentReconciliation';
+import { setSilentCouriersOffline } from '../services/courierAutoOffline';
+import { runRetention } from '../services/retention';
+
+interface JobDefinition {
+    name: string;
+    everyMs: number;
+    run: JobPass;
+}
+
+// Every time-based job of the system. Started only by src/worker.ts (never by the API or the tests).
+const JOBS: JobDefinition[] = [
+    { name: 'payment-expiry', everyMs: 5_000, run: expirePendingPayments },
+    { name: 'accept-timeout', everyMs: 5_000, run: rejectTimedOutOrders },
+    { name: 'payment-outbox', everyMs: 5_000, run: processPaymentOutbox }, 
+    { 
+        name: 'dispatch', 
+        everyMs: 2_000, 
+        run: async () => (await expireTimedOutOffers()) + (await dispatchDueOrders())
+    },
+    { name: 'payment-reconciliation', everyMs: 60_000, run: reconcilePendingPayments },
+    { name: 'courier-auto-offline', everyMs: 15_000, run: setSilentCouriersOffline },
+    { name: 'retention', everyMs: 60 * 60_000, run: runRetention }
+];
+
+export { JOBS };
+export type { JobDefinition };

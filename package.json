@@ -15,6 +15,7 @@
     "migrate:test:down": "node-pg-migrate down --config-file ./config/migrate.test.config.js",
     "seed": "node seeds/seed.js",
     "dev": "tsx watch src/server.ts",
+    "worker": "tsx watch src/worker.ts",
     "build": "tsc",
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit",

@@ -141,8 +141,36 @@ async function closeOfferAsDeclined(client: PoolClient, offer: OfferRef, reason:
     return true;
 }
 
+// Gives back the courier's pending offer (if any) and asks the next courier at once.
+// Run AFTER "offline" was committed: from then on dispatch creates no new offer for this courier.
+// Used by the manual "go offline" and by the auto-offline sweeper.
+async function releasePendingOffer(courierId: string, actor: string): Promise<void> {
+    const releasedOrderId = await withTransaction(async (client) => {
+        await lockActiveCourier(client, courierId);
+        
+        if ((await getAvailability(client, courierId)) === 'online') return null;
+
+        const { rows } = await client.query<OfferRef>(
+            `SELECT id, order_id AS "orderId"
+               FROM order_offers
+              WHERE courier_id = $1 AND status = 'pending'`,
+            [courierId]
+        );
+        const offer = rows[0];
+        if (!offer) return null;
+
+        await client.query(`SELECT 1 FROM orders WHERE id = $1 FOR UPDATE`, [offer.orderId]);
+        const released = await closeOfferAsDeclined(client, offer, 'went_offline');
+        return released ? offer.orderId : null;
+    }, actor, 'offer released: courier went offline');
+
+    // The next courier is asked now
+    if (releasedOrderId) {
+        await dispatchOrderNow(releasedOrderId);
+    }
+}
+
 async function goOffline(courierId: string): Promise<void> {
-    // 1. Commit "offline" first: from here on dispatch must not create a new offer for this courier
     await withTransaction(async (client) => {
         await lockActiveCourier(client, courierId);
         if ((await getAvailability(client, courierId)) === 'offline') return;
@@ -157,30 +185,7 @@ async function goOffline(courierId: string): Promise<void> {
     }, `user:${courierId}`, 'courier went offline');
 
     // 2. Give back the offer that was open, if any. A retry runs this step again.
-    const releasedOrderId = await withTransaction(async (client) => {
-        await lockActiveCourier(client, courierId);
-        // Went online again between the two steps: keep the offer
-        if ((await getAvailability(client, courierId)) === 'online') return null;
-
-        // Not locked yet: we need the order id to lock the order first
-        const { rows } = await client.query<OfferRef>(
-            `SELECT id, order_id AS "orderId"
-               FROM order_offers
-              WHERE courier_id = $1 AND status = 'pending'`,
-            [courierId]
-        );
-        const offer = rows[0];
-        if (!offer) return null;
-
-        await client.query(`SELECT 1 FROM orders WHERE id = $1 FOR UPDATE`, [offer.orderId]);
-        const released = await closeOfferAsDeclined(client, offer, 'went_offline');
-        return released ? offer.orderId : null;
-    }, `user:${courierId}`, 'offer released: courier went offline');
-
-    // 3. The next courier is asked now
-    if (releasedOrderId) {
-        await dispatchOrderNow(releasedOrderId);
-    }
+    await releasePendingOffer(courierId, `user:${courierId}`);
 }
 
 async function setAvailability(courierId: string, online: boolean): Promise<CourierState> {
@@ -192,5 +197,12 @@ async function setAvailability(courierId: string, online: boolean): Promise<Cour
     return getCourierState(courierId);
 }
 
-export { lockActiveCourier, closeOfferAsDeclined, updatePosition, getCourierState, setAvailability };
+export { 
+    lockActiveCourier,
+    closeOfferAsDeclined, 
+    updatePosition, 
+    getCourierState, 
+    setAvailability,
+    releasePendingOffer
+};
 export type { CourierState, OfferRef, DeclineReason };

@@ -2,9 +2,9 @@ import type Stripe from 'stripe';
 import type { PoolClient } from 'pg';
 import { withTransaction } from '../database/transaction';
 import { logger } from '../logger';
-import { enqueueOutbox, queuePaymentVoid } from './outbox';
 import { getNumberSettings } from './settingsService';
 import { expireOrder } from './paymentExpiry';
+import { placeAuthorizedOrder } from './paymentAuthorization';
 
 type EventHandler = (client: PoolClient, event: Stripe.Event) => Promise<void>;
 type LockedOrderRow = {
@@ -88,39 +88,7 @@ async function onAuthorized(client: PoolClient, event: Stripe.Event): Promise<vo
 
     const found = await lockOrderOfEvent(client, event);
     if (!found) return;
-    const { pi, order } = found;
-
-    // Too late: the order already ended while the customer was paying. Give the money back.
-    if (order.status === 'expired' || order.status === 'cancelled') {
-        await queuePaymentVoid(client, order.id, pi.id);
-        logger.info({ orderId: order.id, status: order.status }, 'Late authorization, void queued');
-        return;
-    }
-
-    if (order.status !== 'pending_payment') {
-        return;
-    }
-    // Stripe blocked a different amount than the order total: never place it.
-    if (pi.amount_capturable !== order.totalMinor) {
-        logger.error(
-            { orderId: order.id, amountCapturable: pi.amount_capturable, totalMinor: order.totalMinor },
-            'Authorized amount does not match the order total'
-        );
-        return;
-    }
-
-    await client.query(
-        `UPDATE orders
-            SET status = 'placed',
-                payment_status = 'authorized',
-                placed_at = now(),
-                accept_deadline = now() + make_interval(secs => $2),
-                last_payment_error = NULL,
-                version = version + 1
-          WHERE id = $1`,
-          [order.id, settings.accept_window_s]
-    );
-    await enqueueOutbox(client, 'order.placed', order.id, { orderId: order.id }, `order:${order.id}:placed`);
+    await placeAuthorizedOrder(client, found.order, found.pi, settings.accept_window_s);
 }
 
 // A card attempt was declined. The PaymentIntent stays usable: the customer can try another card.
