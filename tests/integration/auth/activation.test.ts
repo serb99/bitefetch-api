@@ -9,7 +9,12 @@ const SIGNUPS = {
     customer: { path: '/customers', body: { email: 'ana@example.com', password: PASSWORD, fullName: 'Ana Pop' } },
     restaurant_owner: {
         path: '/restaurant-owners',
-        body: { email: 'owner@example.com', password: PASSWORD, fullName: 'Ion Pop', restaurantName: 'Casa', restaurantAddress: 'Str. 1' },
+        // M3 shape: a manual restaurant (or osmId) and opening hours, like ownerBody() in signup.test.ts
+        body: {
+            email: 'owner@example.com', password: PASSWORD, fullName: 'Ion Pop',
+            manualRestaurant: { name: 'Casa', address: 'Str. 1, Brasov', lat: 45.6427, lng: 25.5887 },
+            openingHours: { mon: [['10:00', '22:00']] },
+        },
     },
     courier: {
         path: '/couriers',

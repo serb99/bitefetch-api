@@ -1,6 +1,7 @@
 node_modules/
 .env
 docs/design/implementation-plan.md
+docs/design/notes/future-ideas.md
 .vscode/settings.json
 dist/
 .claude/worktrees/

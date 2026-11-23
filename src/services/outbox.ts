@@ -25,5 +25,9 @@ function queuePaymentVoid(client: PoolClient, orderId: string, paymentIntentId: 
     return enqueueOutbox(client, 'payment.void', orderId, { paymentIntentId }, `order:${orderId}:void`);
 }
 
-export { enqueueOutbox, queuePaymentVoid };
+function queuePaymentCapture(client: PoolClient, orderId: string, paymentIntentId: string): Promise<boolean> {
+    return enqueueOutbox(client, 'payment.capture', orderId, { paymentIntentId }, `order:${orderId}:capture`);
+}
+
+export { enqueueOutbox, queuePaymentVoid, queuePaymentCapture };
 export type { OutboxTopic };

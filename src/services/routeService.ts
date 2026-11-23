@@ -1,7 +1,9 @@
 import { pool } from '../database/pool';
 import { fetchRoute, type Point, type Route } from './osrmClient';
+import { logger } from '../logger';
 
 const CACHE_TTL_DAYS = 7;
+const OPTIONAL_ROUTE_WAIT_MS = 2_500;
 
 // routes being fetched right now, by cache key, so identical requests share one call
 const inFlight = new Map<string, Promise<Route>>();
@@ -59,4 +61,20 @@ function getRoute(fromPoint: Point, toPoint: Point): Promise<Route> {
     return promise;
 }
 
-export { getRoute };
+async function getRouteOrNull(from: Point, to: Point): Promise<Route | null> {
+    const route = getRoute(from, to).catch((err: unknown) => {
+        logger.warn({ err }, 'No route, continuing without it');
+        return null;
+    });
+
+    let timer: NodeJS.Timeout | undefined;
+    const tooSlow = new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), OPTIONAL_ROUTE_WAIT_MS);
+    });
+
+    const first = await Promise.race([route, tooSlow]);
+    clearTimeout(timer);
+    return first;
+}
+
+export { getRoute, getRouteOrNull };

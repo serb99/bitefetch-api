@@ -1,0 +1,16 @@
+import type { Request, Response } from 'express';
+import { getCurrentOrder, pickUpOrder, deliverOrder } from '../services/courierOrderService';
+
+async function getCurrentOrderHandler(req: Request, res: Response): Promise<void> {
+    res.json({ order: await getCurrentOrder(req.user!.id) });
+}
+
+async function pickUpOrderHandler(req: Request<{ id: string }>, res: Response): Promise<void> {
+    res.json(await pickUpOrder(req.user!.id, req.params.id));
+}
+
+async function deliverOrderHandler(req: Request<{ id: string }>, res: Response): Promise<void> {
+    res.json(await deliverOrder(req.user!.id, req.params.id));
+}
+
+export { getCurrentOrderHandler, pickUpOrderHandler, deliverOrderHandler };

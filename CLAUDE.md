@@ -38,6 +38,25 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
   - POST /owner/orders/:id/reject { reasonCode: out_of_stock|too_busy|closing_soon|other, note? (required for other) } (T7)
   - POST /owner/orders/:id/ready (T10), POST /owner/orders/:id/cancel { reasonCode: out_of_stock|kitchen_issue|too_busy|other, note? } (T11, only while accepted)
   - All four: 200 with the order's new state, the same body on a repeat (double click); wrong status → 409 ORDER_STATUS_CHANGED with details.status.
+- Courier (courier role + a courier_profiles row, else 403 NO_COURIER_PROFILE; the services lock the users row, so a
+  suspended courier gets 403 ACCOUNT_NOT_ACTIVE; M7):
+  - GET /courier: state (availability, vehicleType, positionFresh, ...).
+  - PUT /courier/position { lat, lng, accuracyM?, headingDeg?, speedMps?, recordedAt (ISO with offset) } → 204. Strict body,
+    one row per courier, received_at = server time. Every 3 s from the app/simulator.
+  - POST /courier/availability { online } → state. Online needs a position younger than courier_fresh_position_s
+    (409 POSITION_STALE, details.maxAgeS). Offline releases a pending offer (declined with reason went_offline).
+  - GET /courier/offers/current → { offer | null }: restaurant, distanceToRestaurantM, deliveryDistanceM, itemCount,
+    secondsLeft. No customer data before accepting (decision J).
+  - POST /courier/offers/:id/accept → { offerId, orderId, orderCode, status, version, order, route } (route null if OSRM fails).
+    POST /courier/offers/:id/decline { reason?: too_far|busy|vehicle_unsuitable|other }. Someone else's offer → 404 OFFER_NOT_FOUND;
+    no longer pending → 409 OFFER_CLOSED (details.offerStatus); a late accept (past expires_at, sweep not run yet) →
+    409 OFFER_CLOSED {offerStatus: 'expired'} and the offer stays pending until the S4 sweep expires it. Repeats → 200.
+  - GET /courier/orders/current → { order | null } (accepted / ready_for_pickup / picked_up): customer first name +
+    delivery address, never the phone; items; times.
+  - POST /courier/orders/:id/pickup (T12, from accepted or ready_for_pickup) → order + route to the customer;
+    POST /courier/orders/:id/deliver (T13, from picked_up). Both check the STORED position: older than
+    courier_fresh_position_s → 409 POSITION_STALE, farther than location_check_radius_m (150) → 409 TOO_FAR_AWAY
+    { distanceM, maxDistanceM }. A courier who lost the order → 409 ORDER_STATUS_CHANGED; one who never had it → 404 ORDER_NOT_FOUND.
 - Customer only:
   - GET|POST /addresses, PATCH|DELETE /addresses/:id, PUT /addresses/:id/default
   - GET|DELETE /cart, PUT|DELETE /cart/items/:menuItemId (body { restaurantId, quantity }), PUT /cart/address { addressId }
@@ -51,12 +70,13 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
 ## Error codes
 - 400: VALIDATION_ERROR, INVALID_INPUT, INVALID_JSON, INVALID_OR_EXPIRED_TOKEN, INVALID_SIGNATURE (Stripe webhook)
 - 401: UNAUTHENTICATED, ACCESS_TOKEN_EXPIRED, INVALID_CREDENTIALS, INVALID_REFRESH_TOKEN, SESSION_ENDED
-- 403: FORBIDDEN, ACCOUNT_NOT_ACTIVE, NO_RESTAURANT, BRAND_NOT_EDITABLE
-- 404: NOT_FOUND, USER_NOT_FOUND, RESTAURANT_NOT_FOUND, MENU_ITEM_NOT_FOUND, ADDRESS_NOT_FOUND, ORDER_NOT_FOUND, PLACE_NOT_FOUND
+- 403: FORBIDDEN, ACCOUNT_NOT_ACTIVE, NO_RESTAURANT, BRAND_NOT_EDITABLE, NO_COURIER_PROFILE
+- 404: NOT_FOUND, USER_NOT_FOUND, RESTAURANT_NOT_FOUND, MENU_ITEM_NOT_FOUND, ADDRESS_NOT_FOUND, ORDER_NOT_FOUND, PLACE_NOT_FOUND,
+  OFFER_NOT_FOUND
 - 409: CONFLICT, CONSTRAINT_VIOLATION, REFERENCE_VIOLATION, EMAIL_TAKEN, REFRESH_IN_PROGRESS, RESTAURANT_ALREADY_CLAIMED,
   RESTAURANT_AUTO_PAUSED, RESTAURANT_UNAVAILABLE, RESTAURANT_CLOSED, ADDRESS_LIMIT, CART_EMPTY, CART_NO_ADDRESS,
   CART_OTHER_RESTAURANT, ITEM_UNAVAILABLE, PRICE_CHANGED, ORDER_NOT_PAYABLE, ORDER_NOT_CANCELLABLE,
-  ORDER_STATUS_CHANGED, ACCEPT_WINDOW_OVER (CONSTRAINT_VIOLATION is also what the DB transition guard gives, should a service ever slip)
+  ORDER_STATUS_CHANGED, ACCEPT_WINDOW_OVER, POSITION_STALE, TOO_FAR_AWAY, OFFER_CLOSED (CONSTRAINT_VIOLATION is also what the DB transition guard gives, should a service ever slip)
 - 413: PAYLOAD_TOO_LARGE · 422: ADDRESS_OUT_OF_RANGE, MIN_ORDER_NOT_MET, NO_ROUTE · 429: RATE_LIMITED
 - 500: INTERNAL_ERROR · 502: OSM_UNAVAILABLE, ROUTING_UNAVAILABLE, PAYMENT_UNAVAILABLE
 
@@ -129,14 +149,60 @@ How to run it locally (keys, `stripe listen`, test cards, troubleshooting): READ
   resetAccountTables now also deletes order_offers. payments/cancel.test.ts: the "409 once placed" case became T9.
   Jest note: testMatch globs skip dot folders, so tests do not run from a checkout under .claude/worktrees.
 
+## Done: M7 Dispatch and courier delivery (2026-11-23, API + 133 tests; D1 happy path run pending)
+Scope (decisions A-K, 2026-11-22): S1-S5, T12, T13, simulator, happy path script. S6 no_courier, S9 second round and
+missed-offer counting → M9; auto-offline → M8; T1 "fresh courier within 10 km" checkout guard → M9.
+- courierService.ts: lockActiveCourier (users row FOR NO KEY UPDATE: the offer insert's FK takes KEY SHARE, so FOR UPDATE
+  would deadlock), position upsert, availability. Going offline = commit offline, then release the pending offer in a
+  second transaction (closeOfferAsDeclined 'went_offline') and kick dispatch.
+- courierSearch.ts: findCourierCandidates = bounding box (BOX_M_PER_DEGREE 111 000, never smaller than the circle) +
+  haversine <= SEARCH_RADIUS_M (10 km, constant; the 3/6/10 km rounds became one "nearest" query), fresh position,
+  online, user active, no active order, no pending offer, not asked this round; nearest, then went_online_at; limit 5.
+- dispatchService.ts: S1 claimOrderToStart, S2 claimOrderToSearch + tryOffer (locks the profile `online FOR NO KEY UPDATE
+  SKIP LOCKED`, re-checks, INSERT ... ON CONFLICT DO NOTHING); no candidate → next_search_at backoff 2/5/10/30 s by the
+  search age. dispatchDueOrders (timer), dispatchOrderNow and dispatchWaitingOrdersNear (kicks after commit, never throw).
+- offerTimeout.ts: S4 expireTimedOutOffers (SKIP LOCKED, max 100). jobs/dispatchJobs.ts: 2 s timer (expiry, then dispatch),
+  started in server.ts. Moves to the worker in M8.
+- courierOfferService.ts: current offer, decline (S3), accept (S5: lock order user → order → offer; overdue pending → expired + 409).
+- courierOrderService.ts: current order, T12 pickup, T13 deliver (proximity on the stored position, queuePaymentCapture,
+  resolves incidents, frees the courier → dispatchWaitingOrdersNear). orderTransition.ts: courier scope
+  (courier_id = me OR an accepted/withdrawn offer of mine) + assertAssignedCourier. routeService.getRouteOrNull (2.5 s cap).
+  utils/geo.ts distanceMeters, utils/deliveryEta.ts (bike 1.5, scooter 1.2, car 1.0 × OSRM car duration; 25 km/h fallback).
+- Scripts (`scripts/`, typechecked with src, never imported by it): lib/apiClient (re-login on ACCESS_TOKEN_EXPIRED),
+  lib/movement (polyline decode, moveAlong, randomPointNear), lib/courierBot.
+  `npm run simulate:courier` (fleet of 2-6 seed couriers, --couriers N, --restaurant, --email, --answer, --speedup, --once).
+  `npm run happy-path` (-- --runs 5 for D1): needs the API + `stripe listen`; new customer per run (signup limit 5/h),
+  activation token inserted in the dev DB, pays with pm_card_visa via the secret key, local API only.
+- Seed: courier1..courier6 (bike, scooter, car, bike, scooter, car).
+- Tests: tests/integration/dispatch/* (112, helpers in tests/helpers/dispatch.ts) + tests/unit/courierMath.test.ts (21):
+  courierAvailability (36: access per route incl. NO_COURIER_PROFILE/ACCOUNT_NOT_ACTIVE, position upsert + validation,
+  online/offline, offline releases the offer), courierSearch (14: nearest, ties, every exclusion, 9.9 vs 10.1 km, box vs
+  circle), dispatch (16: S1, S2, backoff 2/5/10/30, kicks, S4), offers (16: no customer data, decline, accept, late accept,
+  withdrawn), pickupDeliver (19: T12/T13, proximity, ETA per vehicle + fallback, capture key, lost order 409 vs 404),
+  races (9, each run 8 times: accept vs expiry, accept vs T11, two passes, decline vs expiry, offline vs dispatch/accept,
+  double accept, double deliver, pickup vs T11), dispatchJobs (2: the real 2 s timer with only setInterval faked).
+  No src bugs found. resetAccountTables now also deletes order_cancel_requests, courier_positions and courier_profiles.
+  Time travel: passOfferDeadline also moves offered_at back (CHECK order_offers_expiry_after_offer).
+
 ## Next
-1. M7 (dispatch and courier delivery). Start with a short brainstorm (scope + decisions), then pieces.
-2. Web for M6 (owner board: list + accept/reject/ready/cancel, polling) — Șerban does it later.
+1. Run the full suite once (`npm test`): the M7 files and the M6 files passed separately, the shared reset helper changed.
+2. D1: `npm run seed`, `npm run dev`, `stripe listen`, `npm run happy-path -- --runs 5`. Starting the API rejects the old
+   dev orders 11 and 12 (past their accept deadline) and gives that restaurant a timeout strike.
+3. M7b customer live courier map (tracker), then M8.
+4. Web for M6 (owner board) — Șerban does it later.
 Known gaps left on purpose: reconciliation sweeper for lost webhooks (M8); live updates instead of polling (M10);
 owner actions do not re-check users.status (stateless access token, like the other owner routes); T7 "mark ticked
-items unavailable" (review D1) not built.
+items unavailable" (review D1) not built; T10 ready does not kick dispatch (the 2 s timer picks it up); the S4 sweep
+does not kick dispatch either (the order's next_search_at already equals the offer's expires_at, so the next tick searches it).
 
 ## Parked
 - Admin approve (M11) must copy openingHours from application details into the restaurant.
-- Retention jobs for osm_search_cache / route_cache (M13); courier vehicle ETA factor (M7).
+- Retention jobs for osm_search_cache / route_cache (M13).
+- M11 retry-capture trap: the Stripe key is `order:{id}:capture:{attempt}` with the attempt from the OUTBOX ROW, so a new
+  outbox row for a manual retry restarts at :1 and Stripe replays the old (failed) result. The retry must continue from
+  orders.capture_attempts (:4, ...).
+- browseService.listNearbyRestaurants uses 111.32 km per degree for its box (about 11 m too small at 10 km); courierSearch
+  uses 111 000 m on purpose. Harmless, align when touched.
+- Dockerfile CMD is `node src/server.js`; the build output is `dist/src/server.js` (fix in M14).
+- Admin fleet map (all online couriers): an idea, docs/design/notes/future-ideas.md #1.
 - Web: owner/courier/admin home page still shows the customer "Order food" section; replace with role dashboards (M6/M12).

@@ -7,6 +7,7 @@ import { getNumberSettings } from './settingsService';
 import { lockOrder, assertStatus } from './orderTransition';
 import { queuePaymentVoid } from './outbox';
 import type { RejectOrderBody, OwnerCancelOrderBody } from '../schemas/ownerOrderSchema';
+import { dispatchWaitingOrdersNear } from './dispatchService';
 
 type AcceptedOrder = {
     id: string;
@@ -218,7 +219,7 @@ async function markOrderReady(ownerId: string, orderId: string): Promise<ReadyOr
 async function ownerCancelOrder(ownerId: string, orderId: string, body: OwnerCancelOrderBody): Promise<EndedOrder> {
     const restaurant = await getOwnerRestaurant(ownerId);
 
-     return withTransaction(async (client) => {
+     const { cancelled, freedCourierId } = await withTransaction(async (client) => {
         const order = await lockOrder(client, orderId, { restaurantId: restaurant.id });
         
         if (order.status === 'cancelled' && order.cancelledBy === 'restaurant') {
@@ -226,7 +227,7 @@ async function ownerCancelOrder(ownerId: string, orderId: string, body: OwnerCan
                 `SELECT ${ENDED_COLUMNS} FROM orders WHERE id = $1`,
                 [order.id]
             );
-            return rows[0];
+            return { cancelled: rows[0], freedCourierId: null };
         }
         assertStatus(order, ['accepted']);
 
@@ -257,8 +258,13 @@ async function ownerCancelOrder(ownerId: string, orderId: string, body: OwnerCan
             await queuePaymentVoid(client, order.id, order.paymentIntentId);
         }
         await resolveKitchenLate(client, order.id, 'order cancelled by the restaurant');
-        return rows[0];
+        return { cancelled: rows[0], freedCourierId: order.courierId };
      },`user:${ownerId}`, `cancelled by the restaurant: ${body.reasonCode}`);
+
+     if (freedCourierId) {
+        await dispatchWaitingOrdersNear(freedCourierId);
+     }
+    return cancelled;
 }
 
 // The kitchen board: orders the restaurant still has to answer, cook or hand over.
@@ -299,5 +305,13 @@ async function listOwnerActiveOrders(ownerId: string): Promise<OwnerActiveOrder[
     return rows;
 }
 
-export { acceptOrder, rejectOrder, markOrderReady, ownerCancelOrder, resetMissedOrders, listOwnerActiveOrders};
+export {
+    acceptOrder, 
+    rejectOrder, 
+    markOrderReady, 
+    ownerCancelOrder, 
+    resetMissedOrders, 
+    resolveKitchenLate, 
+    listOwnerActiveOrders 
+}
 export type { AcceptedOrder, EndedOrder, ReadyOrder, OwnerActiveOrder };

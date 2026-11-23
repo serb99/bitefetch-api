@@ -5,7 +5,7 @@
  *   npm run seed -- --test       -> seeds bitefetch_db_test (DB_NAME_TEST)
  *   npm run seed -- --prod-timers -> keeps the production timers in platform_settings
  *
- * Creates: 1 admin, 2 customers (with a default address), 2 couriers, 2 restaurant owners,
+ * Creates: 1 admin, 2 customers (with a default address), 6 couriers, 2 restaurant owners,
  * 2 brands (one private, one chain), 3 restaurants in Cluj-Napoca and a menu for each brand.
  * Also shortens the timers in platform_settings so an order can be tested in minutes.
  *
@@ -53,11 +53,20 @@ const USERS = [
   { key: 'rider2', email: `courier2@${DOMAIN}`, role: 'courier', full_name: 'Elena Courier', phone: '+40700000005' },
   { key: 'owner1', email: `maria@${DOMAIN}`, role: 'restaurant_owner', full_name: 'Maria Rusu', phone: '+40700000006' },
   { key: 'owner2', email: `ion@${DOMAIN}`, role: 'restaurant_owner', full_name: 'Ion Vasilescu', phone: '+40700000007' },
+  // more couriers for the simulator fleet (npm run simulate:courier)
+  { key: 'rider3', email: `courier3@${DOMAIN}`, role: 'courier', full_name: 'Mihai Courier', phone: '+40700000008' },
+  { key: 'rider4', email: `courier4@${DOMAIN}`, role: 'courier', full_name: 'Ioana Courier', phone: '+40700000009' },
+  { key: 'rider5', email: `courier5@${DOMAIN}`, role: 'courier', full_name: 'Andrei Courier', phone: '+40700000010' },
+  { key: 'rider6', email: `courier6@${DOMAIN}`, role: 'courier', full_name: 'Diana Courier', phone: '+40700000011' },
 ];
 
 const COURIERS = [
   { user: 'rider1', vehicle_type: 'bike' },
   { user: 'rider2', vehicle_type: 'scooter' },
+  { user: 'rider3', vehicle_type: 'car' },
+  { user: 'rider4', vehicle_type: 'bike' },
+  { user: 'rider5', vehicle_type: 'scooter' },
+  { user: 'rider6', vehicle_type: 'car' },
 ];
 
 const ADDRESSES = [

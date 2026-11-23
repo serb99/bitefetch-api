@@ -1,0 +1,223 @@
+import { pool } from '../database/pool';
+import { PoolClient } from 'pg';
+import { withTransaction } from '../database/transaction';
+import { logger } from '../logger';
+import { getNumberSettings } from './settingsService';
+import { findCourierCandidates, SEARCH_RADIUS_M, BOX_M_PER_DEGREE, type CourierCandidate } from './courierSearch';
+
+const MAX_ORDERS_PER_PASS = 50;
+const MAX_ORDERS_PER_KICK = 5;
+
+const SETTING_KEYS = ['dispatch_deadline_s', 'offer_timeout_s', 'courier_fresh_position_s'] as const;
+type DispatchSettings = Record<(typeof SETTING_KEYS)[number], number>;
+
+type DispatchOrder = { id: string; round: number; restaurantLat: number; restaurantLng: number };
+type DispatchResult = { orderId: string; offeredTo: CourierCandidate | null };
+
+// the next order whose dispatch time has come, locked and moved to searching
+async function claimOrderToStart(client: PoolClient, deadlineS: number): Promise<DispatchOrder | null> {
+    const { rows } = await client.query<Omit<DispatchOrder, 'round'>>(
+        `SELECT o.id, r.lat AS "restaurantLat", r.lng AS "restaurantLng"
+           FROM orders o
+           JOIN restaurants r ON r.id = o.restaurant_id
+          WHERE o.status IN ('accepted', 'ready_for_pickup')
+            AND o.dispatch_state = 'not_started'
+            AND o.dispatch_after <= now()
+          ORDER BY o.dispatch_after, o.id
+          LIMIT 1
+          FOR UPDATE OF o SKIP LOCKED`
+    );
+    const order = rows[0];
+    if (!order) return null;
+
+    await client.query(
+        `UPDATE orders
+            SET dispatch_state = 'searching',
+                dispatch_round = 1,
+                dispatch_started_at = now(),
+                dispatch_deadline = now() + make_interval(secs => $2),
+                version = version + 1
+          WHERE id = $1`,
+        [order.id, deadlineS]
+    );
+    return { ...order, round: 1};
+}
+
+// the next searching order that is due and has no open offer, locked.
+async function claimOrderToSearch(client: PoolClient, orderId: string | null):  Promise<DispatchOrder | null> {
+    const { rows } = await client.query<DispatchOrder>(
+        `SELECT o.id,
+                o.dispatch_round AS round,
+                r.lat AS "restaurantLat",
+                r.lng AS "restaurantLng"
+           FROM orders o
+           JOIN restaurants r ON r.id = o.restaurant_id
+          WHERE o.status IN ('accepted', 'ready_for_pickup')
+            AND o.dispatch_state IN ('searching', 'no_courier')
+            AND o.next_search_at <= now()
+            AND ($1::bigint IS NULL OR o.id = $1)
+            AND NOT EXISTS (
+                SELECT 1 FROM order_offers f
+                 WHERE f.order_id = o.id AND f.status = 'pending')
+          ORDER BY o.next_search_at, o.id
+          LIMIT 1
+          FOR UPDATE OF o SKIP LOCKED`,
+        [orderId]
+    );
+    return rows[0] ?? null;
+}
+
+// The candidate list can be old by now: lock this courier, check again, then offer.
+// False: take the next candidate.
+async function tryOffer(client: PoolClient, order: DispatchOrder, candidate: CourierCandidate, timeoutS: number): Promise<boolean> {
+    // Nothing back: went offline, or someone is changing this courier right now.
+    const locked = await client.query(
+        `SELECT 1 FROM courier_profiles
+          WHERE user_id = $1 AND availability = 'online'
+          FOR NO KEY UPDATE SKIP LOCKED`,
+          [candidate.courierId]
+    );
+    if (locked.rowCount === 0) return false;
+
+    //what was committed before we got the lock
+     const { rows } = await client.query<{ free: boolean }>(
+        `SELECT NOT EXISTS (
+                    SELECT 1 FROM order_offers
+                     WHERE courier_id = $1 AND status = 'pending')
+            AND NOT EXISTS (
+                    SELECT 1 FROM orders
+                     WHERE courier_id = $1 AND status IN ('accepted', 'ready_for_pickup', 'picked_up'))
+             AS free`,
+        [candidate.courierId]
+    );
+    if (!rows[0].free) return false;
+
+    const offer = await client.query(
+        `INSERT INTO order_offers (order_id, courier_id, round, distance_m, expires_at)
+         VALUES ($1, $2, $3, $4, now() + make_interval(secs => $5))
+         ON CONFLICT DO NOTHING`,
+        [order.id, candidate.courierId, order.round, candidate.distanceM, timeoutS]
+    );
+    return offer.rowCount === 1;
+}
+
+async function searchAndOffer(client: PoolClient, order: DispatchOrder, settings: DispatchSettings): Promise<DispatchResult> {
+    const candidates = await findCourierCandidates(client, {
+        orderId: order.id,
+        round: order.round,
+        restaurantLat: order.restaurantLat,
+        restaurantLng: order.restaurantLng,
+        freshPositionS: settings.courier_fresh_position_s
+    });
+
+    for (const candidate of candidates) {
+        if (await tryOffer(client, order, candidate, settings.offer_timeout_s)){
+            await client.query(
+                `UPDATE orders
+                    SET next_search_at = now() + make_interval(secs => $2)
+                  WHERE id = $1`,
+                [order.id, settings.offer_timeout_s]
+            );
+            return { orderId: order.id, offeredTo: candidate };
+        }
+    }
+
+     // Nobody: the longer the search runs, the less often we look (2 → 5 → 10 → 30 s)
+     await client.query(
+        `UPDATE orders
+            SET next_search_at = now() + CASE
+                    WHEN now() - dispatch_started_at < interval '10 seconds' THEN interval '2 seconds'
+                    WHEN now() - dispatch_started_at < interval '30 seconds' THEN interval '5 seconds'
+                    WHEN now() - dispatch_started_at < interval '1 minute'   THEN interval '10 seconds'
+                    ELSE interval '30 seconds'
+                END
+          WHERE id = $1`,
+        [order.id]
+    );
+    return { orderId: order.id, offeredTo: null };
+}
+
+async function dispatchOne(
+    settings: DispatchSettings,
+    claim: (client: PoolClient) => Promise<DispatchOrder | null>
+): Promise<DispatchResult | null> {
+    const result = await withTransaction(async (client) => {
+        const order = await claim(client);
+        return order ? searchAndOffer(client, order, settings) : null;
+    }, 'system:dispatch', 'courier search');
+
+    if (result?.offeredTo) {
+        logger.info({ orderId: result.orderId, ...result.offeredTo }, 'Order offered to a courier');
+    }
+    return result;
+}
+
+// Called by the 2 s timer. Returns how many orders it handled.
+async function dispatchDueOrders(): Promise<number> {
+    const settings = await getNumberSettings(SETTING_KEYS);
+
+    let started = 0;
+    while (
+        started < MAX_ORDERS_PER_PASS &&
+        (await dispatchOne(settings, (client) => claimOrderToStart(client, settings.dispatch_deadline_s)))
+    ) {
+        started++;
+    }
+
+    let searched = 0;
+    while (searched < MAX_ORDERS_PER_PASS && (await dispatchOne(settings, (client) => claimOrderToSearch(client, null)))) {
+        searched++;
+    }
+    return started + searched;
+}
+
+// The kick, called after a COMMIT. If it fails, the timer does the same job 2 s later.
+async function dispatchOrderNow(orderId: string): Promise<void> {
+    try {
+        const settings = await getNumberSettings(SETTING_KEYS);
+        await dispatchOne(settings, (client) => claimOrderToSearch(client, orderId));
+    } catch (err) {
+        logger.error({ err, orderId }, 'Dispatch kick failed, the timer will retry');
+    }
+}
+
+// The kick when a courier becomes available: the oldest waiting orders around them stop sleeping.
+async function dispatchWaitingOrdersNear(courierId: string): Promise<void> {
+    try {
+        const { rows } = await pool.query<{ id: string }>(
+            `WITH waiting AS (
+                 SELECT o.id
+                   FROM orders o
+                   JOIN restaurants r ON r.id = o.restaurant_id
+                   JOIN courier_positions p ON p.courier_id = $1
+                  WHERE o.status IN ('accepted', 'ready_for_pickup')
+                    AND o.dispatch_state IN ('searching', 'no_courier')
+                    AND abs(r.lat - p.lat) <= $2::float8
+                    AND abs(r.lng - p.lng) <= $2::float8 / cos(radians(r.lat))
+                    AND NOT EXISTS (
+                        SELECT 1 FROM order_offers f
+                         WHERE f.order_id = o.id
+                           AND (f.status = 'pending' OR (f.courier_id = $1 AND f.round = o.dispatch_round)))
+                  ORDER BY o.dispatch_started_at, o.id
+                  LIMIT $3
+                  FOR UPDATE OF o SKIP LOCKED
+             ), woken AS (
+                 UPDATE orders o
+                    SET next_search_at = now()
+                   FROM waiting
+                  WHERE o.id = waiting.id
+              RETURNING o.id, o.dispatch_started_at
+             )
+             SELECT id FROM woken ORDER BY dispatch_started_at, id`,
+            [courierId, SEARCH_RADIUS_M / BOX_M_PER_DEGREE, MAX_ORDERS_PER_KICK]
+        );
+        // One at a time, oldest first, so the longest waiting order gets the courier
+        for (const order of rows) {
+            await dispatchOrderNow(order.id);
+        }
+    } catch(err) {
+        logger.error({ err, courierId }, 'Waking waiting orders failed, the timer will find them');
+    }
+}
+
+export { dispatchDueOrders, dispatchOrderNow, dispatchWaitingOrdersNear };
