@@ -45,7 +45,9 @@ async function runCourierBot(options: BotOptions): Promise<number> {
 
     function headTo(key: string, target: LatLng, route: Route | null): void {
         heading = key;
-        path = [...(route ? decodePolyline(route.polyline) : []), target];
+        // Only lat/lng: the target may be a whole restaurant or customer object, and the last
+        // path point becomes the position we send (PUT /courier/position has a strict body)
+        path = [...(route ? decodePolyline(route.polyline) : []), { lat: target.lat, lng: target.lng }];
     }
 
     async function answerOffer(): Promise<void> {

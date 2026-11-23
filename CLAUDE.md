@@ -1,6 +1,6 @@
 # bitefetch-api
 
-Food-delivery learning project by Șerban (QA → backend/DevOps; Windows, PowerShell 7, Postgres 18).
+Food-delivery learning project (developer: QA → backend/DevOps; Windows, PowerShell 7, Postgres 18).
 Two separate repos: `bitefetch-api` (Node 22, Express 5, TypeScript, pg, Zod) and
 `bitefetch-web` (Vite, React, TS, react-router-dom; unstyled on purpose, styling pass later).
 
@@ -66,6 +66,13 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
     POST /orders/:id/cancel (T5 while pending_payment → abandoned_checkout + cart restored; T9 while placed → customer_cancelled,
     no cart restore; 200 with the order, also on a repeat; from accepted on 409 ORDER_NOT_CANCELLABLE with details.status).
     The order view also has paymentAttempts, maxPaymentAttempts, lastPaymentError, cancelReason.
+  - GET /orders/:id/tracking (M7b, polled every 3 s, database only) → { orderId, status, leg, restaurant {name,lat,lng},
+    destination {lat,lng}, courier { firstName, vehicleType, position { lat, lng, headingDeg, ageS, stale } | null } | null }.
+    Courier only while courier_id is set AND status is accepted/ready_for_pickup/picked_up (the status check is in the
+    users JOIN's ON); leg 'to_restaurant' before pickup, 'to_customer' after, else null. stale = received_at older than
+    courier_fresh_position_s.
+  - GET /orders/:id/route (M7b, once per leg) → { leg, route | null }: to_restaurant = courier's position → restaurant,
+    to_customer = restaurant → delivery point (cached since checkout). getRouteOrNull: null on no position, OSRM error or > 2.5 s.
 
 ## Error codes
 - 400: VALIDATION_ERROR, INVALID_INPUT, INVALID_JSON, INVALID_OR_EXPIRED_TOKEN, INVALID_SIGNATURE (Stripe webhook)
@@ -149,7 +156,7 @@ How to run it locally (keys, `stripe listen`, test cards, troubleshooting): READ
   resetAccountTables now also deletes order_offers. payments/cancel.test.ts: the "409 once placed" case became T9.
   Jest note: testMatch globs skip dot folders, so tests do not run from a checkout under .claude/worktrees.
 
-## Done: M7 Dispatch and courier delivery (2026-11-23, API + 133 tests; D1 happy path run pending)
+## Done: M7 Dispatch and courier delivery (2026-11-23, API + 133 tests; D1 happy path passed 2026-11-23)
 Scope (decisions A-K, 2026-11-22): S1-S5, T12, T13, simulator, happy path script. S6 no_courier, S9 second round and
 missed-offer counting → M9; auto-offline → M8; T1 "fresh courier within 10 km" checkout guard → M9.
 - courierService.ts: lockActiveCourier (users row FOR NO KEY UPDATE: the offer insert's FK takes KEY SHARE, so FOR UPDATE
@@ -184,12 +191,27 @@ missed-offer counting → M9; auto-offline → M8; T1 "fresh courier within 10 k
   No src bugs found. resetAccountTables now also deletes order_cancel_requests, courier_positions and courier_profiles.
   Time travel: passOfferDeadline also moves offered_at back (CHECK order_offers_expiry_after_offer).
 
+## Done: M7b Customer live courier map (2026-11-23, API + web + 26 tests; browser DoD check pending)
+Decisions A-H: two endpoints (tracking poll + route per leg), legs, courier = first name + vehicle, stale flag, own order
+only (404), no migration and no new error codes, react-leaflet@5, OrderPage polls every non-final status.
+- trackingService.ts: getOrderTracking (one SELECT, LEFT JOINs users/courier_profiles/courier_positions, status filter in
+  the ON so a finished order still returns its row), getOrderRoute (reuses getOrderTracking, then getRouteOrNull).
+  Handlers in orderController, routes in orderRoutes (customer router, validateIdParam).
+- Web: see bitefetch-web/CLAUDE.md (CourierMap, LiveTracking on OrderPage).
+- Tests: tests/integration/tracking/* (helpers in tests/helpers/tracking.ts: getTracking, getRoute, fetchedUrls).
+  tracking (15): 401/403/400/404, no courier when placed or accepted without one, exact courier keys (no leaks),
+  legs per status, T11 and delivered hide the courier (courier_id still set), position null / fresh / 40 s stale /
+  the boundary, headingDeg. route (11): same access cases, no OSRM call without a leg or a position, the OSRM URL
+  from the courier's current position, to_customer from the checkout cache, OSRM 500 → null, a 3 s OSRM → null at 2.5 s
+  (the slow test waits for the late answer so it cannot leak into the next test). No src bugs found.
+
 ## Next
-1. Run the full suite once (`npm test`): the M7 files and the M6 files passed separately, the shared reset helper changed.
-2. D1: `npm run seed`, `npm run dev`, `stripe listen`, `npm run happy-path -- --runs 5`. Starting the API rejects the old
-   dev orders 11 and 12 (past their accept deadline) and gives that restaurant a timeout strike.
-3. M7b customer live courier map (tracker), then M8.
-4. Web for M6 (owner board) — Șerban does it later.
+1. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer).
+2. Run the full suite once (`npm test`): the M7 files and the M6 files passed separately, the shared reset helper changed.
+3. D1 passed (2026-11-23; fixed the simulator's headTo, which kept the whole restaurant object as a position).
+   The developer tags `d1-happy-path` and writes the "harder than planned" note in the tracker.
+4. M8.
+5. Web for M6 (owner board) — the developer does it later.
 Known gaps left on purpose: reconciliation sweeper for lost webhooks (M8); live updates instead of polling (M10);
 owner actions do not re-check users.status (stateless access token, like the other owner routes); T7 "mark ticked
 items unavailable" (review D1) not built; T10 ready does not kick dispatch (the 2 s timer picks it up); the S4 sweep

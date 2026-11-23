@@ -6,6 +6,7 @@ import { listCustomerOrders, getCustomerOrder } from '../services/orderService';
 import { listOrdersQuerySchema } from '../schemas/orderSchema';
 import { ensurePaymentIntent } from '../services/paymentService'
 import { cancelCustomerOrder } from '../services/orderCancelService';
+import { getOrderTracking, getOrderRoute } from '../services/trackingService';
 
 async function createOrderHandler(req: Request, res: Response) {
     // the key travels in a header, not in the body
@@ -43,4 +44,19 @@ async function cancelOrderHandler(req: Request<{ id: string }>, res: Response) {
     res.json(await cancelCustomerOrder(req.user!.id, req.params.id));
 }
 
-export { createOrderHandler, listOrdersHandler, getOrderHandler, getOrderPaymentHandler, cancelOrderHandler };
+async function getOrderTrackingHandler(req: Request<{ id: string }>, res: Response) {
+    res.json(await getOrderTracking(req.user!.id, req.params.id));
+}
+
+async function getOrderRouteHandler(req: Request<{ id: string }>, res: Response) {
+    res.json(await getOrderRoute(req.user!.id, req.params.id));
+}
+export { 
+    createOrderHandler, 
+    listOrdersHandler,
+     getOrderHandler, 
+     getOrderPaymentHandler, 
+     cancelOrderHandler,
+     getOrderTrackingHandler,
+     getOrderRouteHandler
+};
