@@ -20,7 +20,8 @@
     "start": "node dist/src/server.js",
     "typecheck": "tsc --noEmit",
     "simulate:courier": "tsx scripts/courierSimulator.ts",
-    "happy-path": "tsx scripts/happyPath.ts"
+    "happy-path": "tsx scripts/happyPath.ts",
+    "robots": "tsx scripts/robotRunner.ts"
   },
   "keywords": [],
   "author": "",

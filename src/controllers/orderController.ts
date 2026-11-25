@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../errors/AppError';
-import { idempotencyKeySchema } from '../schemas/checkoutSchema';
+import { idempotencyKeySchema, type CheckoutBody } from '../schemas/checkoutSchema';
 import { createOrder } from '../services/checkoutService';
 import { listCustomerOrders, getCustomerOrder } from '../services/orderService';
 import { listOrdersQuerySchema, type CancelOrderBody } from '../schemas/orderSchema';
@@ -15,7 +15,8 @@ async function createOrderHandler(req: Request, res: Response) {
         throw new AppError(400, 'VALIDATION_ERROR', 'The Idempotency-Key header is required (1 to 100 characters)');
     }
 
-    const { order, created, clientSecret } = await createOrder(req.user!.id, key.data, req.body.expectedTotalMinor);
+    const body = req.body as CheckoutBody;   // validated (and deliveryMode defaulted) by validate(checkoutBodySchema)
+    const { order, created, clientSecret } = await createOrder(req.user!.id, key.data, body.expectedTotalMinor, body.deliveryMode);
     res.status(created ? 201 : 200).json({ ...order, clientSecret });
 }
 

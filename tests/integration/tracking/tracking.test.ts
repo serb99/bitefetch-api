@@ -115,7 +115,7 @@ describe('while the courier works on the order', () => {
             courier: { firstName: 'Test', vehicleType: 'bike' }, // full_name 'Test User' → first word
         });
         // no last name, phone, email or id leaks to the customer
-        expect(Object.keys(res.body.courier).sort()).toEqual(['firstName', 'position', 'vehicleType']);
+        expect(Object.keys(res.body.courier).sort()).toEqual(['firstName', 'isRobot', 'position', 'vehicleType']);
         expect(Object.keys(res.body.courier.position).sort()).toEqual(['ageS', 'headingDeg', 'lat', 'lng', 'stale']);
     });
 
@@ -150,7 +150,7 @@ describe('the courier position', () => {
         const res = await getTracking(orderId, customer.headers);
 
         expect(res.body.leg).toBe('to_restaurant');
-        expect(res.body.courier).toEqual({ firstName: 'Test', vehicleType: 'bike', position: null });
+        expect(res.body.courier).toEqual({ firstName: 'Test', vehicleType: 'bike', isRobot: false, position: null });
     });
 
     it('fresh: the stored point, ageS 0-1, stale false, headingDeg null when the phone did not send one', async () => {

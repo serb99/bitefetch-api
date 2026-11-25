@@ -5,7 +5,7 @@ import { withTransaction } from '../database/transaction';
 import { AppError } from '../errors/AppError';
 import type { SetCartItemInput } from '../schemas/cartSchema';
 import type { OpeningHours } from '../utils/openingHours';
-import { quoteDelivery, type DeliveryQuote } from './deliveryQuoteService';
+import { quoteDeliveryOptions, type DeliveryQuote, type RobotQuote } from './deliveryQuoteService';
 import { getNumberSettings } from './settingsService';
 
 type CartRow = { id: string; restaurantId: string | null; deliveryAddressId: string | null };
@@ -28,9 +28,12 @@ type CartView = {
     currency: string;
     minOrderMinor: number;
     meetsMinOrder: boolean;
-    delivery: DeliveryQuote | null;
-    deliveryError: string | null;    // ADDRESS_OUT_OF_RANGE, NO_ROUTE or ROUTING_UNAVAILABLE
-    totalMinor: number | null;       // subtotal + fee, only when the fee is known
+    delivery: DeliveryQuote | null;  // the human courier quote
+    deliveryError: string | null;    // ADDRESS_OUT_OF_RANGE, NO_ROUTE or ROUTING_UNAVAILABLE (both modes)
+    totalMinor: number | null;       // subtotal + human fee, only when the fee is known
+    // M9b: the robot option. null when the fee is unknown or robots are off (not a Stripe test key)
+    robotDelivery: RobotQuote | null;
+    robotTotalMinor: number | null;  // subtotal + robot fee: what checkout with deliveryMode 'robot' expects
 };
 
 type CartAddressRow = {
@@ -63,6 +66,8 @@ const EMPTY_CART: CartView = {
     delivery: null,
     deliveryError: null,
     totalMinor: null,
+    robotDelivery: null,
+    robotTotalMinor: null,
 };
 
 // Used by every change to the cart. Creates the cart on first use, then locks its row
@@ -150,15 +155,18 @@ async function getCartView(customerId: string): Promise<CartView> {
 
     const subtotalMinor = lines.rows.reduce((sum, line) => sum + line.lineTotalMinor, 0);
 
-    // estimated delivery: needs items, a restaurant and an address
+    // estimated delivery: needs items, a restaurant and an address. Both modes from one route lookup.
     let delivery: DeliveryQuote | null = null;
+    let robotDelivery: RobotQuote | null = null;
     let deliveryError: string | null = null;
     if (restaurantRow && addressRow && lines.rows.length > 0) {
         try {
-            delivery = await quoteDelivery(
+            const options = await quoteDeliveryOptions(
                 { lat: restaurantRow.lat, lng: restaurantRow.lng },
                 { lat: addressRow.lat, lng: addressRow.lng },
             );
+            delivery = options.human;
+            robotDelivery = options.robot;
         }catch (err) {
                 if (!(err instanceof AppError)) {
                     throw err;
@@ -178,6 +186,8 @@ async function getCartView(customerId: string): Promise<CartView> {
         delivery,
         deliveryError,
         totalMinor: delivery ? subtotalMinor + delivery.feeMinor : null,
+        robotDelivery,
+        robotTotalMinor: robotDelivery ? subtotalMinor + robotDelivery.feeMinor : null,
     };
 }
 

@@ -12,6 +12,8 @@ it('every job of the system is listed once, with a positive interval', () => {
         'payment-outbox',
         'payment-reconciliation',
         'retention',
+        'robot-idle',
+        'robot-start',
     ]);
     for (const job of JOBS) {
         expect(job.everyMs).toBeGreaterThan(0);

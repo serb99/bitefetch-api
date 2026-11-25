@@ -86,7 +86,8 @@ const CANCEL_REQUEST_COLUMNS = `
     created_at AS "createdAt",
     decided_at AS "decidedAt"`;
 
-type OwnerOrderItem = { name: string; quantity: number };
+// menuItemId: null when the dish was deleted after the order (FK ON DELETE SET NULL)
+type OwnerOrderItem = { menuItemId: string | null; name: string; quantity: number };
 type OwnerActiveOrder = {
       id: string;
       orderCode: string;
@@ -98,6 +99,7 @@ type OwnerActiveOrder = {
       prepMinutes: number | null;
       estimatedReadyAt: Date | null;
       readyAt: Date | null;
+      cancelRequestPending: boolean;   // T14 step 1 sent, the admin has not decided yet
       items: OwnerOrderItem[];
 };
 // The owner answered, so the "missed orders in a row" counter starts again
@@ -337,8 +339,18 @@ async function listOwnerActiveOrders(ownerId: string): Promise<OwnerActiveOrder[
                   o.prep_minutes AS "prepMinutes",
                   o.estimated_ready_at AS "estimatedReadyAt",
                   o.ready_at AS "readyAt",
+                  EXISTS (
+                      SELECT 1
+                        FROM order_cancel_requests cr
+                       WHERE cr.order_id = o.id
+                         AND cr.status = 'pending'
+                  ) AS "cancelRequestPending",
+                  -- ::text: inside json a bigint becomes a JSON number; ids are strings
                   COALESCE(
-                      (SELECT json_agg(json_build_object('name', oi.name, 'quantity', oi.quantity)
+                      (SELECT json_agg(json_build_object(
+                                  'menuItemId', oi.menu_item_id::text,
+                                  'name', oi.name,
+                                  'quantity', oi.quantity)
                             ORDER BY oi.id)
                         FROM order_items oi
                         WHERE oi.order_id = o.id),

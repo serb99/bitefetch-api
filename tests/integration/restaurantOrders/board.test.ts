@@ -4,6 +4,7 @@ import {
     placedOrderAt, pendingOrderAt, accept, reject, ready, board, passAcceptDeadline, ownerWithoutRestaurant,
     type Shop,
 } from '../../helpers/restaurantOrders';
+import { createAdmin, decideCancelRequest, requestCancel } from '../../helpers/unhappy';
 
 // GET /owner/orders: the kitchen board (placed, accepted, ready_for_pickup), most urgent first.
 
@@ -22,7 +23,7 @@ async function acceptedAt(shop: Shop, prepMinutes: number): Promise<string> {
 }
 
 describe('GET /owner/orders', () => {
-    it('one order: the kitchen fields, items as name + quantity, no customer data', async () => {
+    it('one order: the kitchen fields, items as menuItemId + name + quantity, no customer data', async () => {
         const shop = await createShop();
         const { orderId } = await placedOrderAt(shop);
 
@@ -40,8 +41,39 @@ describe('GET /owner/orders', () => {
             prepMinutes: null,
             estimatedReadyAt: null,
             readyAt: null,
-            items: [{ name: 'Pizza', quantity: 2 }],
+            cancelRequestPending: false,
+            items: [{ menuItemId: shop.pizzaId, name: 'Pizza', quantity: 2 }],
         }]);
+    });
+
+    it('menuItemId is a string (bigint cast inside json_build_object), null once the dish is gone', async () => {
+        const shop = await createShop();
+        const { orderId } = await placedOrderAt(shop);
+
+        const before = await board(shop.headers);
+        expect(typeof before.body[0].items[0].menuItemId).toBe('string');
+
+        // What ON DELETE SET NULL leaves behind when the owner deletes the dish after the order
+        await pool.query('UPDATE order_items SET menu_item_id = NULL WHERE order_id = $1', [orderId]);
+
+        const after = await board(shop.headers);
+        expect(after.body[0].items).toEqual([{ menuItemId: null, name: 'Pizza', quantity: 2 }]);
+    });
+
+    it('cancelRequestPending: false, true after the owner asks, false again once the admin decides', async () => {
+        const shop = await createShop();
+        const orderId = await acceptedAt(shop, 20);
+        await ready(orderId, shop.headers);
+        const pending = async () => (await board(shop.headers)).body[0].cancelRequestPending;
+
+        expect(await pending()).toBe(false);
+
+        const request = (await requestCancel(orderId, shop.headers)).body;
+        expect(await pending()).toBe(true);
+
+        const admin = await createAdmin();
+        await decideCancelRequest(admin, request.id, 'reject', { version: request.version });
+        expect(await pending()).toBe(false);   // closed request, the order is still on the board
     });
 
     it('groups placed → accepted → ready, each group sorted by its own deadline', async () => {

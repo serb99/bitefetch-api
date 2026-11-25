@@ -1,4 +1,5 @@
 import type { PoolClient } from 'pg';
+import type { RobotVehicle } from '../utils/deliveryEta';
 
 type SearchInput = {
     orderId: string;
@@ -6,6 +7,9 @@ type SearchInput = {
     restaurantLat: number;
     restaurantLng: number;
     freshPositionS: number;
+    // M9b: null = a human order, only human couriers. Otherwise a robot order, only robots of THIS vehicle
+    // (the one its fee was quoted for: a sidewalk robot never gets a 5 km route).
+    robotVehicle: RobotVehicle | null;
 };
 type CourierCandidate = { courierId: string; distanceM: number };
 
@@ -15,7 +19,7 @@ const MAX_CANDIDATES = 5;
 export const BOX_M_PER_DEGREE = 111_000;
 
 async function findCourierCandidates(client: PoolClient, search: SearchInput): Promise<CourierCandidate[]> {
-    const { orderId, round, restaurantLat: lat, restaurantLng: lng, freshPositionS } = search;
+    const { orderId, round, restaurantLat: lat, restaurantLng: lng, freshPositionS, robotVehicle } = search;
     const latDelta = SEARCH_RADIUS_M / BOX_M_PER_DEGREE;
     const lngDelta = latDelta / Math.cos((lat * Math.PI) / 180);
 
@@ -38,6 +42,10 @@ async function findCourierCandidates(client: PoolClient, search: SearchInput): P
                    AND p.received_at > now() - make_interval(secs => $7)
                    AND cp.availability = 'online'
                    AND u.status = 'active'
+                   -- the split: humans for human orders, the right robot vehicle for robot orders
+                   AND CASE WHEN $12::vehicle_type IS NULL THEN NOT cp.is_robot
+                            ELSE cp.vehicle_type = $12::vehicle_type
+                       END
                    AND NOT EXISTS (
                        SELECT 1 FROM orders o
                         WHERE o.courier_id = p.courier_id
@@ -62,13 +70,14 @@ async function findCourierCandidates(client: PoolClient, search: SearchInput): P
             lng - lngDelta, lng + lngDelta,
             freshPositionS,
             orderId, round,
-            SEARCH_RADIUS_M, MAX_CANDIDATES
+            SEARCH_RADIUS_M, MAX_CANDIDATES,
+            robotVehicle
           ]
     );
     return rows;
 }
 
-// Checkout guard: is there any online, active courier with a fresh position within SEARCH_RADIUS_M
+// Checkout guard (human orders only): is there any online, active HUMAN courier with a fresh position within SEARCH_RADIUS_M
 // of the restaurant? Busy couriers count too: they may be free by the time the food is ready.
 async function hasCourierNear(client: PoolClient, lat: number, lng: number, freshPositionS: number): Promise<boolean> {
     const latDelta = SEARCH_RADIUS_M / BOX_M_PER_DEGREE;
@@ -85,6 +94,7 @@ async function hasCourierNear(client: PoolClient, lat: number, lng: number, fres
                 AND p.received_at > now() - make_interval(secs => $7)
                 AND cp.availability = 'online'
                 AND u.status = 'active'
+                AND NOT cp.is_robot   -- robots never count for a human checkout (T1)
                 AND 2 * 6371000 * asin(sqrt(
                         power(sin(radians(p.lat - $1::float8) / 2), 2) +
                         cos(radians($1::float8)) * cos(radians(p.lat)) *

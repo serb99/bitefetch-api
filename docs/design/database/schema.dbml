@@ -41,6 +41,12 @@ Enum vehicle_type {
   bike
   scooter
   car
+  robot [note: 'M9b: sidewalk robot, routes up to robot_max_distance_m']
+  robot_car [note: 'M9b: autonomous car, longer routes']
+}
+Enum delivery_mode {
+  human
+  robot [note: 'M9b: chosen at checkout, cheaper and slower']
 }
 Enum courier_availability {
   online
@@ -181,6 +187,7 @@ Table users {
 Table courier_profiles {
   user_id bigint [pk]
   vehicle_type vehicle_type [not null]
+  is_robot boolean [not null, default: false, note: "M9b: seed robot accounts; CHECK courier_profiles_robot_vehicle_check: is_robot = vehicle in ('robot', 'robot_car')"]
   availability courier_availability [not null, default: 'offline']
   offline_reason courier_offline_reason [default: 'manual', note: 'null while online']
   consecutive_missed_offers int [not null, default: 0, note: 'reset by any answer; 2 in a row -> offline (missed_offers)']
@@ -492,6 +499,7 @@ Table orders {
   idempotency_key varchar(100) [not null, note: 'Idempotency-Key header; unique per customer']
   status order_status [not null, default: 'pending_payment']
   version int [not null, default: 0, note: 'incremented by every UPDATE; optimistic lock and socket event ordering']
+  delivery_mode delivery_mode [not null, default: 'human', note: 'M9b: set at checkout; robot orders only get robots, human orders only humans']
 
   // money (R1, R2)
   subtotal_minor int [not null]

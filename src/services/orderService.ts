@@ -1,6 +1,7 @@
 import { pool } from '../database/pool';
 import { AppError } from '../errors/AppError';
 import { getNumberSettings } from './settingsService';
+import type { DeliveryMode } from '../schemas/checkoutSchema';
 
 type OrderItemView = {
     menuItemId: string | null;     // null if the menu item was ever hard-deleted
@@ -40,6 +41,7 @@ type OrderView = {
     cancelNote: string | null;        // free text given with the cancel or reject
     // the web shows Cancel while the courier search failed (no_courier and nobody assigned)
     dispatchState: 'not_started' | 'searching' | 'no_courier' | 'assigned';
+    deliveryMode: DeliveryMode;       // M9b: chosen at checkout (human courier or BiteFetch robot)
     createdAt: Date;
 };
 
@@ -81,6 +83,7 @@ async function getCustomerOrder(customerId: string, orderId: string): Promise<Or
                 o.cancel_reason AS "cancelReason",
                 o.cancel_note AS "cancelNote",
                 o.dispatch_state AS "dispatchState",
+                o.delivery_mode AS "deliveryMode",
                 o.created_at AS "createdAt"
             FROM orders o
             JOIN restaurants r ON r.id = o.restaurant_id

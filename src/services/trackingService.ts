@@ -24,6 +24,7 @@ type OrderTracking = {
     courier: {
         firstName: string;
         vehicleType: VehicleType;
+        isRobot: boolean;                   // M9b: "Robot courier R1 is bringing your order, meet it at the street"
         position: CourierPosition | null;   // null: the courier never sent one
     } | null;
 };
@@ -34,6 +35,7 @@ type TrackingRow = {
     destination: OrderTracking['destination'];
     courierFirstName: string | null;
     vehicleType: VehicleType | null;
+    isRobot: boolean | null;
     position: CourierPosition | null;
 };
 
@@ -52,6 +54,7 @@ async function getOrderTracking(customerId: string, orderId: string): Promise<Or
                 json_build_object('lat', o.delivery_lat, 'lng', o.delivery_lng) AS destination,
                 split_part(cu.full_name, ' ', 1) AS "courierFirstName",
                 cp.vehicle_type AS "vehicleType",
+                cp.is_robot AS "isRobot",
                 CASE WHEN p.courier_id IS NOT NULL THEN json_build_object(
                     'lat', p.lat,
                     'lng', p.lng,
@@ -81,7 +84,7 @@ async function getOrderTracking(customerId: string, orderId: string): Promise<Or
         restaurant: row.restaurant,
         destination: row.destination,
         courier: hasCourier
-            ? { firstName: row.courierFirstName!, vehicleType: row.vehicleType!, position: row.position }
+            ? { firstName: row.courierFirstName!, vehicleType: row.vehicleType!, isRobot: row.isRobot === true, position: row.position }
             : null
     };
 }

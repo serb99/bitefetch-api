@@ -18,9 +18,14 @@ type BotOptions = {
     stopAfterDeliveries?: number;
     onDelivered?: () => void;        // the fleet uses it to stop everyone after the first delivery
     tickMs?: number;
+    // M9b robots: the WORKER put this courier online (with a position at the restaurant). The bot does not go
+    // online itself, does one job and stops (then goes offline) as soon as it has no order and no offer:
+    // after the delivery, or when the order was cancelled.
+    managed?: boolean;
 };
 
-const SPEED_KMH = { bike: 15, scooter: 25, car: 30 } as const;
+// robot: about 6 km/h on the sidewalk; robot_car: a car that drives 25% slower (30 / 1.25)
+const SPEED_KMH = { bike: 15, scooter: 25, car: 30, robot: 6, robot_car: 24 } as const;
 
 async function runCourierBot(options: BotOptions): Promise<number> {
     const { api, speedup, answer, signal, log } = options;
@@ -31,6 +36,7 @@ async function runCourierBot(options: BotOptions): Promise<number> {
     let heading: string | null = null;
     let delivered = 0;
     let lastMessage = '';
+    let jobDone = false;   // managed: nothing left to do, stop
 
     function say(message: string): void {
         if (message !== lastMessage) {
@@ -50,23 +56,25 @@ async function runCourierBot(options: BotOptions): Promise<number> {
         path = [...(route ? decodePolyline(route.polyline) : []), { lat: target.lat, lng: target.lng }];
     }
 
-    async function answerOffer(): Promise<void> {
+    // false: there was no offer
+    async function answerOffer(): Promise<boolean> {
         const { offer } = await api.call<{ offer: CurrentOffer | null }>('GET', '/courier/offers/current');
         if (!offer) {
             say('waiting for an offer');
-            return;
+            return false;
         }
         say(`offer ${offer.id}: ${offer.restaurant.name}, ${offer.distanceToRestaurantM} m away`);
-        if (answer === 'ignore') return;
+        if (answer === 'ignore') return true;
         if (answer === 'decline') {
             await api.call('POST', `/courier/offers/${offer.id}/decline`, { reason: 'busy' });
             say(`declined offer ${offer.id}`);
-            return;
+            return true;
         }
 
         const { order, route, orderCode } = await api.call<AcceptResult>('POST', `/courier/offers/${offer.id}/accept`);
         say(`accepted ${orderCode}, ${route ? 'following the road' : 'no route, straight line'}`);
         if (order) headTo(`${order.id}:restaurant`, order.restaurant, route);
+        return true;
     }
 
     async function workOn(order: CourierOrder): Promise<void> {
@@ -111,12 +119,17 @@ async function runCourierBot(options: BotOptions): Promise<number> {
             heading = null;
             path = [];
         }
-        await answerOffer();
+        const hadOffer = await answerOffer();
+        // A robot never waits for the next job: the worker starts a robot per order
+        if (options.managed && !hadOffer) jobDone = true;
     }
 
     await api.login();
     await sendPosition();
-    const { vehicleType } = await api.call<CourierState>('POST', '/courier/availability', { online: true });
+    // managed: already online (the worker did it); only read the vehicle
+    const { vehicleType } = options.managed
+        ? await api.call<CourierState>('GET', '/courier')
+        : await api.call<CourierState>('POST', '/courier/availability', { online: true });
     const metersPerTick = ((SPEED_KMH[vehicleType] * 1000) / 3600) * (tickMs / 1000) * speedup;
     log(`online (${vehicleType}, ${Math.round(metersPerTick)} m per step)`);
 
@@ -133,6 +146,7 @@ async function runCourierBot(options: BotOptions): Promise<number> {
                 }
             }
             if (options.stopAfterDeliveries && delivered >= options.stopAfterDeliveries) break;
+            if (jobDone) break;
             await sleep(tickMs, undefined, { signal }).catch(() => undefined); // abort wakes it up
         }
     } finally {

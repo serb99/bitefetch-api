@@ -6,9 +6,10 @@ import { sessionEnded } from '../errors/authErrors';
 import { getNumberSettings } from './settingsService';
 import type { CourierPositionBody } from '../schemas/courierSchema';
 import { dispatchOrderNow, dispatchWaitingOrdersNear } from './dispatchService';
+import type { VehicleType } from '../utils/deliveryEta';
 
 type CourierState = {
-    vehicleType: 'bike' | 'scooter' | 'car';
+    vehicleType: VehicleType;   // M9b: also robot / robot_car for the robot accounts
     availability: 'online' | 'offline';
     offlineReason: 'manual' | 'missed_offers' | 'no_position' | 'suspended' | null;
     wentOnlineAt: Date | null;

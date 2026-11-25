@@ -10,8 +10,10 @@
  *   npm run happy-path
  *   npm run happy-path -- --runs 5                       checkpoint D1: five in a row
  *   npm run happy-path -- --owner ion@bitefetch.local    order from Pizza Napoli Centru instead
+ *   npm run happy-path -- --mode robot                   M9b: a BiteFetch robot delivers (cheaper fee). Needs
+ *                                                        the worker and `npm run robots` too, and no human courier
  *
- * --courier EMAIL (default courier1)   --speedup 20   --api URL (local only)
+ * --courier EMAIL (default courier1, human mode only)   --speedup 20   --api URL (local only)
  */
 import 'dotenv/config';
 import { parseArgs } from 'node:util';
@@ -23,6 +25,8 @@ import { generateToken, hashToken } from '../src/utils/tokens';
 import type { OrderView } from '../src/services/orderService';
 import type { CartView } from '../src/services/cartService';
 import type { Address } from '../src/services/addressService';
+import type { OrderTracking } from '../src/services/trackingService';
+import type { DeliveryMode } from '../src/schemas/checkoutSchema';
 import { ApiClient, ApiCallError } from './lib/apiClient';
 import { runCourierBot } from './lib/courierBot';
 import { randomPointNear } from './lib/movement';
@@ -76,7 +80,58 @@ async function activate(api: ApiClient, userId: string): Promise<void> {
     await api.call('POST', '/account-activations', { token });
 }
 
-async function happyPath(options: { apiUrl: string; ownerEmail: string; courierEmail: string; speedup: number }): Promise<void> {
+type RunOptions = { apiUrl: string; ownerEmail: string; courierEmail: string; speedup: number; mode: DeliveryMode };
+
+// Human mode: our own courier bot goes online near the restaurant (before the checkout: the T1 guard needs a
+// fresh courier within 10 km). Robot mode: nothing here, the worker starts a robot and `npm run robots` drives it.
+// Returns a check for "has the courier stopped?" and the stop function.
+async function startCourier(
+    options: RunOptions,
+    restaurant: OwnRestaurant,
+    step: (message: string) => void
+): Promise<{ stopped: () => string | null; stop: () => Promise<void> }> {
+    if (options.mode === 'robot') {
+        return { stopped: () => null, stop: async () => undefined };
+    }
+
+    const stopCourier = new AbortController();
+    const courierName = options.courierEmail.split('@')[0];
+    // A courier that cannot start (wrong password, no profile) must fail the run, not hang it
+    let courierStopped: string | null = null;
+    const courier = runCourierBot({
+        api: new ApiClient(options.apiUrl, { email: options.courierEmail, password: PASSWORD }),
+        start: randomPointNear(restaurant, 300, 1_500),
+        speedup: options.speedup,
+        answer: 'accept',
+        signal: stopCourier.signal,
+        log: (message) => step(`[${courierName}] ${message}`)
+    }).then(
+        () => { courierStopped = 'it went offline'; },
+        (err: unknown) => { courierStopped = describe(err); }
+    );
+    const stopped = () => (courierStopped ? `${courierName} stopped: ${courierStopped}` : null);
+    const stop = async () => {
+        stopCourier.abort(); // the bot goes offline
+        await courier;
+    };
+
+    try {
+        const courierView = new ApiClient(options.apiUrl, { email: options.courierEmail, password: PASSWORD });
+        await courierView.login();
+        await waitFor('the courier to go online', COURIER_ONLINE_WAIT_MS, async () => {
+            const why = stopped();
+            if (why) throw new RunFailed(why);
+            const state = await courierView.call<{ availability: string }>('GET', '/courier');
+            return state.availability === 'online' ? state : undefined;
+        });
+    } catch (err) {
+        await stop();
+        throw err;
+    }
+    return { stopped, stop };
+}
+
+async function happyPath(options: RunOptions): Promise<void> {
     const startedAt = Date.now();
     const step = (message: string) => console.log(`  ${((Date.now() - startedAt) / 1000).toFixed(1).padStart(5)} s  ${message}`);
 
@@ -116,40 +171,26 @@ async function happyPath(options: { apiUrl: string; ownerEmail: string; courierE
     const quantity = Math.min(50, Math.max(1, Math.ceil(empty.minOrderMinor / item.priceMinor)));
     await customer.call('PUT', `/cart/items/${item.id}`, { restaurantId: restaurant.id, quantity });
     const cart = await customer.call<CartView>('PUT', '/cart/address', { addressId: address.id });
-    if (cart.totalMinor === null) throw new RunFailed('the cart has no total (delivery fee unknown)');
-    step(`cart: ${quantity} x ${item.name}, total ${cart.totalMinor} cents`);
+    // The total of the chosen mode (the robot one is cheaper); null = not deliverable that way
+    const expectedTotalMinor = options.mode === 'robot' ? cart.robotTotalMinor : cart.totalMinor;
+    if (expectedTotalMinor === null) {
+        throw new RunFailed(options.mode === 'robot'
+            ? 'the cart has no robot total (robots off: not a Stripe test key?)'
+            : 'the cart has no total (delivery fee unknown)');
+    }
+    step(options.mode === 'robot'
+        ? `cart: ${quantity} x ${item.name}, robot total ${expectedTotalMinor} cents (human ${cart.totalMinor}), ${cart.robotDelivery?.vehicle}`
+        : `cart: ${quantity} x ${item.name}, total ${expectedTotalMinor} cents`);
 
-    // 4. A courier goes online near the restaurant. It runs in the background until we stop it.
-    //    It comes BEFORE the checkout: checkout needs a fresh courier within 10 km of the restaurant.
-    const stopCourier = new AbortController();
-    const courierName = options.courierEmail.split('@')[0];
-    // A courier that cannot start (wrong password, no profile) must fail the run, not hang it
-    let courierStopped: string | null = null;
-    const courier = runCourierBot({
-        api: new ApiClient(options.apiUrl, { email: options.courierEmail, password: PASSWORD }),
-        start: randomPointNear(restaurant, 300, 1_500),
-        speedup: options.speedup,
-        answer: 'accept',
-        signal: stopCourier.signal,
-        log: (message) => step(`[${courierName}] ${message}`)
-    }).then(
-        () => { courierStopped = 'it went offline'; },
-        (err: unknown) => { courierStopped = describe(err); }
-    );
+    // 4. Human mode: a courier goes online near the restaurant, in the background until we stop it
+    const courier = await startCourier(options, restaurant, step);
 
     try {
-        const courierView = new ApiClient(options.apiUrl, { email: options.courierEmail, password: PASSWORD });
-        await courierView.login();
-        await waitFor('the courier to go online', COURIER_ONLINE_WAIT_MS, async () => {
-            if (courierStopped) throw new RunFailed(`${courierName} stopped: ${courierStopped}`);
-            const state = await courierView.call<{ availability: string }>('GET', '/courier');
-            return state.availability === 'online' ? state : undefined;
-        });
-
         // 5. Checkout
-        const order = await customer.call<PlacedOrder>('POST', '/orders', { expectedTotalMinor: cart.totalMinor }, {
+        const order = await customer.call<PlacedOrder>('POST', '/orders', { expectedTotalMinor, deliveryMode: options.mode }, {
             'Idempotency-Key': randomUUID()
         });
+        if (order.deliveryMode !== options.mode) throw new RunFailed(`the order has deliveryMode ${order.deliveryMode}`);
         const clientSecret =
             order.clientSecret ?? (await customer.call<{ clientSecret: string }>('GET', `/orders/${order.id}/payment`)).clientSecret;
         step(`order ${order.orderCode} created (pending_payment)`);
@@ -177,12 +218,27 @@ async function happyPath(options: { apiUrl: string; ownerEmail: string; courierE
 
         // 8. Watch the order as the customer sees it. Any courier may deliver it, not only ours.
         let lastStatus = '';
-        await waitFor('the delivery', DELIVERY_WAIT_MS, async () => {
-            if (courierStopped) throw new RunFailed(`${courierName} stopped: ${courierStopped}`);
+        let courierSeen = false;
+        await waitFor(options.mode === 'robot' ? 'the delivery (are the worker and `npm run robots` running?)' : 'the delivery',
+            DELIVERY_WAIT_MS, async () => {
+            const why = courier.stopped();
+            if (why) throw new RunFailed(why);
             const now = await readOrder();
             if (!ON_THE_WAY.includes(now.status)) throw new RunFailed(`the order ended as ${now.status} (${now.cancelReason})`);
             if (now.status !== lastStatus) step(`order is ${now.status}`);
             lastStatus = now.status;
+
+            // Who delivers, as the customer's tracking shows it: a robot for a robot order, a human otherwise
+            if (!courierSeen && now.status !== 'delivered') {
+                const tracking = await customer.call<OrderTracking>('GET', `/orders/${order.id}/tracking`);
+                if (tracking.courier) {
+                    courierSeen = true;
+                    if (tracking.courier.isRobot !== (options.mode === 'robot')) {
+                        throw new RunFailed(`a ${tracking.courier.isRobot ? 'robot' : 'human'} took a ${options.mode} order`);
+                    }
+                    step(`courier: ${tracking.courier.firstName} (${tracking.courier.vehicleType}${tracking.courier.isRobot ? ', robot' : ''})`);
+                }
+            }
             return now.status === 'delivered' ? now : undefined;
         });
 
@@ -194,8 +250,7 @@ async function happyPath(options: { apiUrl: string; ownerEmail: string; courierE
         });
         step('payment captured');
     } finally {
-        stopCourier.abort(); // the bot goes offline
-        await courier;
+        await courier.stop();
     }
 }
 
@@ -208,9 +263,12 @@ async function main(): Promise<void> {
             owner: { type: 'string', default: `maria@${DOMAIN}` },
             courier: { type: 'string', default: `courier1@${DOMAIN}` },
             speedup: { type: 'string', default: '20' },
-            runs: { type: 'string', default: '1' }
+            runs: { type: 'string', default: '1' },
+            mode: { type: 'string', default: 'human' }
         }
     });
+    const mode = (['human', 'robot'] as const).find((m) => m === values.mode);
+    if (!mode) throw new Error('--mode must be human or robot');
 
     // The activation step writes to the local database, so the API must be the local one too
     const { hostname } = new URL(values.api);
@@ -225,7 +283,7 @@ async function main(): Promise<void> {
         console.log(`Run ${run}/${runs}`);
         const started = Date.now();
         try {
-            await happyPath({ apiUrl: values.api, ownerEmail: values.owner, courierEmail: values.courier, speedup });
+            await happyPath({ apiUrl: values.api, ownerEmail: values.owner, courierEmail: values.courier, speedup, mode });
             passed++;
             console.log(`  PASSED in ${Math.round((Date.now() - started) / 1000)} s\n`);
         } catch (err) {

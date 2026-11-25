@@ -12,7 +12,8 @@ import { dispatchDueOrders } from '../../src/services/dispatchService';
 // createShop() puts the restaurant at BRASOV; addAddress() puts the customer 0.01° north (~1.1 km).
 
 type LatLng = { lat: number; lng: number };
-type Vehicle = 'bike' | 'scooter' | 'car';
+// robot / robot_car (M9b) create a robot account: is_robot is set from the vehicle (CHECK courier_profiles_robot_vehicle_check)
+type Vehicle = 'bike' | 'scooter' | 'car' | 'robot' | 'robot_car';
 type Headers = { Authorization: string };
 
 // One degree of latitude on the sphere src/utils/geo uses (radius 6 371 km), so distances come out exact
@@ -57,10 +58,11 @@ async function createCourier(options: CourierOptions = {}): Promise<Courier> {
     const user = await createUser({ role: 'courier', status: options.status });
     const online = options.online ?? true;
     await pool.query(
-        `INSERT INTO courier_profiles (user_id, vehicle_type, availability, offline_reason, went_online_at)
+        `INSERT INTO courier_profiles (user_id, vehicle_type, availability, offline_reason, went_online_at, is_robot)
          VALUES ($1, $2::vehicle_type, $3::courier_availability,
                  CASE WHEN $3 = 'online' THEN NULL ELSE 'manual'::courier_offline_reason END,
-                 CASE WHEN $3 = 'online' THEN now() - make_interval(secs => $4) END)`,
+                 CASE WHEN $3 = 'online' THEN now() - make_interval(secs => $4) END,
+                 $2 IN ('robot', 'robot_car'))`,
         [user.id, options.vehicle ?? 'bike', online ? 'online' : 'offline', options.wentOnlineAgoS ?? 60]
     );
     const at = options.at === undefined ? moved(BRASOV, 300) : options.at;

@@ -2,7 +2,8 @@ import { withTransaction } from '../database/transaction';
 import { AppError } from '../errors/AppError';
 import { getOrCreateCart } from './cartService';
 import { isOrderable } from './browseService';
-import { quoteDelivery } from './deliveryQuoteService';
+import { quoteDeliveryOptions, robotsEnabled } from './deliveryQuoteService';
+import type { DeliveryMode } from '../schemas/checkoutSchema';
 import { getNumberSettings } from './settingsService';
 import { getCustomerOrder, type OrderView } from './orderService';
 import { generateOrderCode } from '../utils/orderCode';
@@ -48,7 +49,8 @@ const MAX_CODE_ATTEMPTS = 5;
 async function createOrder(
     customerId: string,
     idempotencyKey: string,
-    expectedTotalMinor: number
+    expectedTotalMinor: number,
+    deliveryMode: DeliveryMode = 'human'
 ): Promise<CheckoutResult> {
     const outcome = await withTransaction(async (client) => {
         // 1. lock the cart: a second click or a retry waits here until we finish
@@ -62,6 +64,11 @@ async function createOrder(
         );
         if (existing.rows[0]) {
             return { orderId: existing.rows[0].id, created: false };
+        }
+
+        // 2b. robots only with a Stripe test key: with a live key a robot "delivery" would capture a real card
+        if (deliveryMode === 'robot' && !robotsEnabled()) {
+            throw new AppError(409, 'ROBOTS_UNAVAILABLE', 'Robot delivery is not available');
         }
 
         const linesResult = await client.query<LineRow>(
@@ -103,10 +110,12 @@ async function createOrder(
             throw new AppError(409, 'RESTAURANT_CLOSED', 'This restaurant is closed right now');
         }
 
-        // 4b. a courier must be around: if nobody could deliver it, so do not take the money. Switchable
-        // (platform setting checkout_courier_check, 0 in the test database).
+        // 4b. a human courier must be around: if nobody could deliver it, do not take the money. Switchable
+        // (platform setting checkout_courier_check, 0 in the test database). Not for robot orders: the worker
+        // starts a robot for them, so they never wait for a human.
         const courierCheck = await getNumberSettings(['checkout_courier_check', 'courier_fresh_position_s'] as const);
         if (
+            deliveryMode === 'human' &&
             courierCheck.checkout_courier_check === 1 &&
             !(await hasCourierNear(client, restaurant.lat, restaurant.lng, courierCheck.courier_fresh_position_s))
         ) {
@@ -142,18 +151,26 @@ async function createOrder(
             });
         }
 
-        const quote = await quoteDelivery(
+        // The fee of the CHOSEN mode: the robot price is the one the customer saw as robotTotalMinor
+        const options = await quoteDeliveryOptions(
             { lat: restaurant.lat, lng: restaurant.lng },
             { lat: address.lat, lng: address.lng }
         );
+        const quote = deliveryMode === 'robot' ? options.robot : options.human;
+        if (quote === null) {
+            // robotsEnabled() was true at 2b, so only a key change in between gets here
+            throw new AppError(409, 'ROBOTS_UNAVAILABLE', 'Robot delivery is not available');
+        }
         const totalMinor = subtotalMinor + quote.feeMinor;
 
-        // 8. the customer must have seen this total
+        // 8. the customer must have seen this total (for this mode: a human total with deliveryMode 'robot'
+        // is a PRICE_CHANGED too, so a page that sent the wrong mode never pays the wrong price)
         if (totalMinor !== expectedTotalMinor) {
             throw new AppError(409, 'PRICE_CHANGED', 'The price changed, please check your order again', {
                 subtotalMinor,
                 deliveryFeeMinor: quote.feeMinor,
                 totalMinor,
+                deliveryMode,
             });
         }
 
@@ -174,15 +191,15 @@ async function createOrder(
                 `INSERT INTO orders (
                     order_code, customer_id, restaurant_id, delivery_address_id, idempotency_key,
                     subtotal_minor, delivery_fee_minor, total_minor, currency, delivery_distance_m,
-                    delivery_address_snapshot, delivery_lat, delivery_lng, payment_expires_at)
+                    delivery_address_snapshot, delivery_lat, delivery_lng, payment_expires_at, delivery_mode)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $13,
-                         now() + ($14::int * interval '1 second'))
+                         now() + ($14::int * interval '1 second'), $15)
                 ON CONFLICT (order_code) DO NOTHING
                 RETURNING id`,
                 [
                   generateOrderCode(), customerId, restaurant.id, address.id, idempotencyKey,
                   subtotalMinor, quote.feeMinor, totalMinor, lines[0].currency, quote.distanceM,
-                  JSON.stringify(snapshot), address.lat, address.lng, settings.payment_window_s  
+                  JSON.stringify(snapshot), address.lat, address.lng, settings.payment_window_s, deliveryMode
                 ]
             );
             orderId = inserted.rows[0]?.id ?? null;

@@ -5,20 +5,45 @@ import { logger } from '../logger';
 import { getNumberSettings } from './settingsService';
 import { findCourierCandidates, SEARCH_RADIUS_M, BOX_M_PER_DEGREE, type CourierCandidate } from './courierSearch';
 import { openOrderIncident } from './incidents';
+import { robotVehicleFor, type RobotVehicle } from '../utils/deliveryEta';
+import type { DeliveryMode } from '../schemas/checkoutSchema';
 
 const MAX_ORDERS_PER_PASS = 50;
 const MAX_ORDERS_PER_KICK = 5;
 
-const SETTING_KEYS = ['dispatch_deadline_s', 'offer_timeout_s', 'courier_fresh_position_s', 'second_round_after_s'] as const;
+const SETTING_KEYS = [
+    'dispatch_deadline_s', 'offer_timeout_s', 'courier_fresh_position_s', 'second_round_after_s', 'robot_max_distance_m',
+] as const;
 type DispatchSettings = Record<(typeof SETTING_KEYS)[number], number>;
 
-type DispatchOrder = { id: string; round: number; restaurantLat: number; restaurantLng: number };
+type DispatchOrder = {
+    id: string;
+    round: number;
+    restaurantLat: number;
+    restaurantLng: number;
+    deliveryMode: DeliveryMode;     // M9b: who may get it
+    deliveryDistanceM: number;      // M9b: picks the robot vehicle (sidewalk or car)
+};
+
+// The order's columns every claim reads (both claims return the same shape)
+const ORDER_COLUMNS = `
+    o.id,
+    r.lat AS "restaurantLat",
+    r.lng AS "restaurantLng",
+    o.delivery_mode AS "deliveryMode",
+    o.delivery_distance_m AS "deliveryDistanceM"`;
+
+// M9b: null for a human order (humans only). For a robot order the same rule as the checkout quote,
+// so the robot that comes is the one whose price the customer paid.
+function robotVehicleOf(order: DispatchOrder, settings: DispatchSettings): RobotVehicle | null {
+    return order.deliveryMode === 'robot' ? robotVehicleFor(order.deliveryDistanceM, settings.robot_max_distance_m) : null;
+}
 type DispatchResult = { orderId: string; offeredTo: CourierCandidate | null };
 
 // the next order whose dispatch time has come, locked and moved to searching
 async function claimOrderToStart(client: PoolClient, deadlineS: number): Promise<DispatchOrder | null> {
     const { rows } = await client.query<Omit<DispatchOrder, 'round'>>(
-        `SELECT o.id, r.lat AS "restaurantLat", r.lng AS "restaurantLng"
+        `SELECT ${ORDER_COLUMNS}
            FROM orders o
            JOIN restaurants r ON r.id = o.restaurant_id
           WHERE o.status IN ('accepted', 'ready_for_pickup')
@@ -47,10 +72,8 @@ async function claimOrderToStart(client: PoolClient, deadlineS: number): Promise
 // the next searching order that is due and has no open offer, locked.
 async function claimOrderToSearch(client: PoolClient, orderId: string | null):  Promise<DispatchOrder | null> {
     const { rows } = await client.query<DispatchOrder>(
-        `SELECT o.id,
-                o.dispatch_round AS round,
-                r.lat AS "restaurantLat",
-                r.lng AS "restaurantLng"
+        `SELECT ${ORDER_COLUMNS},
+                o.dispatch_round AS round
            FROM orders o
            JOIN restaurants r ON r.id = o.restaurant_id
           WHERE o.status IN ('accepted', 'ready_for_pickup')
@@ -124,7 +147,8 @@ async function searchAndOffer(client: PoolClient, order: DispatchOrder, settings
         round: order.round,
         restaurantLat: order.restaurantLat,
         restaurantLng: order.restaurantLng,
-        freshPositionS: settings.courier_fresh_position_s
+        freshPositionS: settings.courier_fresh_position_s,
+        robotVehicle: robotVehicleOf(order, settings),
     });
 
     for (const candidate of candidates) {
@@ -252,6 +276,8 @@ async function dispatchOrderNow(orderId: string): Promise<void> {
 }
 
 // The kick when a courier becomes available: the oldest waiting orders around them stop sleeping.
+// M9b: only orders of the courier's kind (a free robot never wakes human orders, and the reverse).
+// The vehicle is not matched here: a robot of the wrong vehicle only causes a search that finds nobody.
 async function dispatchWaitingOrdersNear(courierId: string): Promise<void> {
     try {
         const { rows } = await pool.query<{ id: string }>(
@@ -260,8 +286,10 @@ async function dispatchWaitingOrdersNear(courierId: string): Promise<void> {
                    FROM orders o
                    JOIN restaurants r ON r.id = o.restaurant_id
                    JOIN courier_positions p ON p.courier_id = $1
+                   JOIN courier_profiles cp ON cp.user_id = $1
                   WHERE o.status IN ('accepted', 'ready_for_pickup')
                     AND o.dispatch_state IN ('searching', 'no_courier')
+                    AND o.delivery_mode = CASE WHEN cp.is_robot THEN 'robot'::delivery_mode ELSE 'human'::delivery_mode END
                     AND abs(r.lat - p.lat) <= $2::float8
                     AND abs(r.lng - p.lng) <= $2::float8 / cos(radians(r.lat))
                     AND NOT EXISTS (

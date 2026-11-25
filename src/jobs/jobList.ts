@@ -8,6 +8,7 @@ import { sweepLateOrders } from '../services/incidentSweeps';
 import { reconcilePendingPayments } from '../services/paymentReconciliation';
 import { setSilentCouriersOffline } from '../services/courierAutoOffline';
 import { runRetention } from '../services/retention';
+import { startRobotsForDueOrders, setIdleRobotsOffline } from '../services/robotDispatch';
 
 interface JobDefinition {
     name: string;
@@ -27,6 +28,9 @@ const JOBS: JobDefinition[] = [
         run: async () =>
             (await expireTimedOutOffers()) + (await markNoCourierOrders()) + (await dispatchDueOrders())
     },
+    // M9b: start a robot for robot orders being searched (then offers it at once), and park idle robots
+    { name: 'robot-start', everyMs: 2_000, run: startRobotsForDueOrders },
+    { name: 'robot-idle', everyMs: 30_000, run: setIdleRobotsOffline },
     { name: 'payment-reconciliation', everyMs: 60_000, run: reconcilePendingPayments },
     { name: 'courier-auto-offline', everyMs: 15_000, run: setSilentCouriersOffline },
     // kitchen_late and delivery_overdue incidents

@@ -25,6 +25,7 @@ describe('GET /cart', () => {
         expect(res.body).toEqual({
             restaurant: null, address: null, items: [], subtotalMinor: 0, currency: 'EUR',
             minOrderMinor: 500, meetsMinOrder: false, delivery: null, deliveryError: null, totalMinor: null,
+            robotDelivery: null, robotTotalMinor: null,
         });
     });
 

@@ -5,7 +5,7 @@
  *   npm run seed -- --test       -> seeds bitefetch_db_test (DB_NAME_TEST)
  *   npm run seed -- --prod-timers -> keeps the production timers in platform_settings
  *
- * Creates: 1 admin, 2 customers (with a default address), 6 couriers, 2 restaurant owners,
+ * Creates: 1 admin, 2 customers (with a default address), 6 couriers, 6 robot couriers (M9b), 2 restaurant owners,
  * 2 brands (one private, one chain), 3 restaurants in Cluj-Napoca and a menu for each brand.
  * Also shortens the timers in platform_settings so an order can be tested in minutes.
  *
@@ -58,6 +58,14 @@ const USERS = [
   { key: 'rider4', email: `courier4@${DOMAIN}`, role: 'courier', full_name: 'Ioana Courier', phone: '+40700000009' },
   { key: 'rider5', email: `courier5@${DOMAIN}`, role: 'courier', full_name: 'Andrei Courier', phone: '+40700000010' },
   { key: 'rider6', email: `courier6@${DOMAIN}`, role: 'courier', full_name: 'Diana Courier', phone: '+40700000011' },
+  // BiteFetch robot couriers (M9b): started by the worker, driven by the robot runner, never real people.
+  // The name comes first so the courier's "first name" (tracking) is R1, R2, ...
+  { key: 'robot1', email: `robot1@${DOMAIN}`, role: 'courier', full_name: 'R1 Robot', phone: '+40700000012' },
+  { key: 'robot2', email: `robot2@${DOMAIN}`, role: 'courier', full_name: 'R2 Robot', phone: '+40700000013' },
+  { key: 'robot3', email: `robot3@${DOMAIN}`, role: 'courier', full_name: 'R3 Robot', phone: '+40700000014' },
+  { key: 'robot4', email: `robot4@${DOMAIN}`, role: 'courier', full_name: 'R4 Robot', phone: '+40700000015' },
+  { key: 'robot5', email: `robot5@${DOMAIN}`, role: 'courier', full_name: 'R5 Robot', phone: '+40700000016' },
+  { key: 'robot6', email: `robot6@${DOMAIN}`, role: 'courier', full_name: 'R6 Robot', phone: '+40700000017' },
 ];
 
 const COURIERS = [
@@ -67,6 +75,13 @@ const COURIERS = [
   { user: 'rider4', vehicle_type: 'bike' },
   { user: 'rider5', vehicle_type: 'scooter' },
   { user: 'rider6', vehicle_type: 'car' },
+  // half sidewalk robots (short routes), half robot cars (beyond robot_max_distance_m)
+  { user: 'robot1', vehicle_type: 'robot', is_robot: true },
+  { user: 'robot2', vehicle_type: 'robot', is_robot: true },
+  { user: 'robot3', vehicle_type: 'robot', is_robot: true },
+  { user: 'robot4', vehicle_type: 'robot_car', is_robot: true },
+  { user: 'robot5', vehicle_type: 'robot_car', is_robot: true },
+  { user: 'robot6', vehicle_type: 'robot_car', is_robot: true },
 ];
 
 const ADDRESSES = [
@@ -157,8 +172,8 @@ async function main() {
     }
     for (const c of COURIERS) {
       await client.query(
-        `INSERT INTO courier_profiles (user_id, vehicle_type) VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING`,
-        [userId[c.user], c.vehicle_type],
+        `INSERT INTO courier_profiles (user_id, vehicle_type, is_robot) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING`,
+        [userId[c.user], c.vehicle_type, c.is_robot ?? false],
       );
     }
 

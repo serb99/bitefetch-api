@@ -32,7 +32,7 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
   PUT /owner/menu-items/:id/availability
 - Owner orders (restaurant_owner, M6; the restaurant comes from the owner, another restaurant's order → 404 ORDER_NOT_FOUND):
   - GET /owner/orders: the kitchen board. placed (minus past-deadline ones), accepted, ready_for_pickup; most urgent first
-    (placed by accept_deadline, accepted by estimated_ready_at, ready by ready_at). Items as { name, quantity }, no customer data.
+    (placed by accept_deadline, accepted by estimated_ready_at, ready by ready_at). Items as { menuItemId (string | null), name, quantity }, cancelRequestPending (boolean), no customer data.
   - POST /owner/orders/:id/accept { prepMinutes? 10-60 step 5, default prep_minutes_default } (T6; body may be absent)
     → 409 ACCEPT_WINDOW_OVER after accept_deadline.
   - POST /owner/orders/:id/reject { reasonCode: out_of_stock|too_busy|closing_soon|other, note? (required for other),
@@ -88,8 +88,12 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
     customer_cancelled, no cart restore; M9 T18 while accepted/ready_for_pickup with dispatch_state no_courier and nobody
     assigned → cancel_reason no_courier, offer withdrawn, incident resolved; 200 with the order, also on a repeat; otherwise 409 ORDER_NOT_CANCELLABLE
     { status, dispatchState }, message "A courier just accepted this order" when assigned).
-    POST /orders also refuses with 409 NO_COURIER_NEARBY when no online, active courier with a fresh position is within
-    10 km of the restaurant (T1 guard, platform setting checkout_courier_check: 1 on, 0 off; 0 in the test database).
+    POST /orders also refuses with 409 NO_COURIER_NEARBY when no online, active HUMAN courier with a fresh position is within
+    10 km of the restaurant (T1 guard, human orders only; platform setting checkout_courier_check: 1 on, 0 off; 0 in the test database).
+    M9b: body may have deliveryMode 'human' (default) | 'robot'; robot needs a sk_test_ STRIPE_SECRET_KEY (else 409
+    ROBOTS_UNAVAILABLE) and expectedTotalMinor = the cart's robotTotalMinor. GET /cart also returns robotDelivery
+    { vehicle robot|robot_car, distanceM, feeMinor, etaS } | null and robotTotalMinor. The order view has deliveryMode;
+    tracking's courier has isRobot.
     The order view also has paymentAttempts, maxPaymentAttempts, lastPaymentError, cancelReason, cancelNote, dispatchState.
   - GET /orders/:id/tracking (M7b, polled every 3 s, database only) → { orderId, status, leg, restaurant {name,lat,lng},
     destination {lat,lng}, courier { firstName, vehicleType, position { lat, lng, headingDeg, ageS, stale } | null } | null }.
@@ -105,7 +109,7 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
 - 403: FORBIDDEN, ACCOUNT_NOT_ACTIVE, NO_RESTAURANT, BRAND_NOT_EDITABLE, NO_COURIER_PROFILE
 - 404: NOT_FOUND, USER_NOT_FOUND, RESTAURANT_NOT_FOUND, MENU_ITEM_NOT_FOUND, ADDRESS_NOT_FOUND, ORDER_NOT_FOUND, PLACE_NOT_FOUND,
   OFFER_NOT_FOUND, CANCEL_REQUEST_NOT_FOUND
-- 409 (M9): NO_COURIER_NEARBY, VERSION_CONFLICT, CANCEL_REQUEST_CLOSED, CUSTOMER_WAIT_NOT_OVER
+- 409 (M9): NO_COURIER_NEARBY, VERSION_CONFLICT, CANCEL_REQUEST_CLOSED, CUSTOMER_WAIT_NOT_OVER; (M9b) ROBOTS_UNAVAILABLE
 - 409: CONFLICT, CONSTRAINT_VIOLATION, REFERENCE_VIOLATION, EMAIL_TAKEN, REFRESH_IN_PROGRESS, RESTAURANT_ALREADY_CLAIMED,
   RESTAURANT_AUTO_PAUSED, RESTAURANT_UNAVAILABLE, RESTAURANT_CLOSED, ADDRESS_LIMIT, CART_EMPTY, CART_NO_ADDRESS,
   CART_OTHER_RESTAURANT, ITEM_UNAVAILABLE, PRICE_CHANGED, ORDER_NOT_PAYABLE, ORDER_NOT_CANCELLABLE,
@@ -305,15 +309,54 @@ queues stay in M11; the admin's version = orders.version (T14: the request's own
   (accept vs expiry got a 20 s timeout: about 5 s already in M8, flaky at Jest's default 5 s).
   Re-ran unhappy + restaurantOrders + dispatch + payments + worker + orders + tracking + unit: 530 green. No src bugs found.
 
+## Done: M9b Robot couriers (2026-11-25, code + 49 tests; full `npm test` green and happy-path --mode robot passed (DoD))
+Decisions A-G (2026-11-25): the worker decides (robot online + position at the restaurant), the runner only drives;
+cart keeps `delivery` (human) + robotDelivery/robotTotalMinor; deliveryMode optional (default human); robots only with
+sk_test_ (409 ROBOTS_UNAVAILABLE, the runner refuses too); one robot per customer (a second robot order waits);
+idle robots offline after robot_idle_offline_s; enum values in their own noTransaction migration.
+- Migrations 1794300000000 (vehicle_type robot, robot_car; noTransaction) and 1794300000001 (courier_profiles.is_robot +
+  CHECK is_robot = robot vehicle, orders.delivery_mode, settings robot_max_distance_m 2000, robot_fee_discount_pct 50,
+  robot_car_fee_discount_pct 30, robot_idle_offline_s 300). Seed robot1-3 (robot), robot4-6 (robot_car), "R1 Robot".
+  Run migrate:up, migrate:test:up and seed.
+- utils: discountedFeeMinor (floor, pct clamped), deliveryEtaSeconds robot = distance at 6 km/h, robot_car = car x 1.25,
+  robotVehicleFor (sidewalk up to robot_max_distance_m). deliveryQuoteService.quoteDeliveryOptions (one route, both
+  quotes; robot null unless robotsEnabled()). Checkout: deliveryMode, T1 only for human, fee of the chosen mode, stored.
+- courierSearch: SearchInput.robotVehicle (null = humans only, else only robots of that vehicle); hasCourierNear humans
+  only. dispatchService: claims read delivery_mode/delivery_distance_m; dispatchWaitingOrdersNear only orders of the
+  courier's kind.
+- robotDispatch.ts: startRobotsForDueOrders (job robot-start, 2 s: robot order searching, nobody assigned, no pending
+  offer, customer has no other robot on an order; skipped if findCourierCandidates already finds a robot; picks the
+  least recently started free robot of the vehicle, never one whose offer for this order expired/withdrawn; position at
+  the restaurant, online, next_search_at now, then dispatchOrderNow) and setIdleRobotsOffline (job robot-idle, 30 s).
+- scripts/robotRunner.ts (`npm run robots`): robot1..6, polls GET /courier; online + offer/order → courierBot in managed
+  mode (does not go online itself, one job, offline when no order and no offer). Ctrl+C once = finish deliveries.
+  happyPath `--mode robot` (needs worker + robots; checks tracking isRobot).
+- Tests (49, helpers in tests/helpers/robots.ts; createCourier now takes vehicle robot/robot_car and sets is_robot):
+  tests/unit/robotMath (18: discount rounding/clamp, robot ETA, vehicle by distance incl. exactly 2000 m),
+  tests/integration/robots/robotCheckout (13: both quotes 1500 / 3001 m, robots off with a live key, out of range,
+  robot checkout stored + order view, default human, PRICE_CHANGED with the human total, ROBOTS_UNAVAILABLE, replay after
+  the key changed, bad mode 400, T1 guard: human 409 / robot 201, an online robot does not count, a human does),
+  robotDispatch (18: the split both ways and by vehicle, start at the restaurant + offer, no second start, robot car
+  beyond 2 km, never for human orders, an online free robot is used instead, busy fleet, one robot per customer, an
+  expired robot is not restarted, tracking isRobot, idle job: 5 min idle → offline, young / recent offer / on a
+  delivery / human untouched). Changed for the new shapes: orders/cart (empty cart), tracking (courier keys), worker/jobList.
+  Full `npm test` green 2026-11-25 (run alone: two runs at once on the test DB give deadlocks and duplicate keys; the
+  earlier outbox "flake" was exactly that). No src bugs found.
+- dev.ps1 (workspace) starts the robot runner by default ('robots' tab after the API answers; -NoRobots to skip,
+  -RobotsArgs to pass options): robot orders are only delivered while it runs, so it is always on like the worker
+  (production: one more service in M14). Without it a robot order's offers expire and it ends as no_courier.
+- DoD (the developer): no human courier online; API + worker + `npm run robots` + stripe listen;
+  `npm run happy-path -- --mode robot` delivers and captures at the robot price.
+
 ## Next
 Done 2026-11-24: migrate:up on the dev DB, happy-path passed with the changed script, full `npm test` green (D2).
 An unhappy-paths script against real Stripe was considered and skipped (flows checked by hand in M5, covered by the
 tests; the Playwright e2e in M13 covers them through the UI). Ideas #2 robot couriers and #3 "use my location" are in
 docs/design/notes/future-ideas.md.
 1. Tag d2-unhappy-paths (the developer).
-2. Web for M6 (owner board): the developer builds it. It unblocks step 4.
-3. Web for M9: OrderPage shows Cancel while dispatchState = no_courier (customer cancel when no courier is found) and
-   the cancel note; checkout shows NO_COURIER_NEARBY.
+2. Done 2026-11-25: web owner board (M6); the board now also returns items[].menuItemId and cancelRequestPending.
+3. Done 2026-11-25: web for M9 (customer Cancel while placed or no_courier, cancel reason + note, NO_COURIER_NEARBY at checkout).
+   Both not yet checked in the browser (step 4).
 4. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer). Dev needs `npm run worker` too.
 5. D1 note "harder than planned" in the tracker (tag d1-happy-path is on 575e4e4, local only).
 6. M9b Robot couriers, API part (tracker; design in future-ideas.md #2), agreed 2026-11-24. Then M10 (realtime) or M11 (admin lists).
