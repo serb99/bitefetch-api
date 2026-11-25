@@ -6,8 +6,11 @@ import { getOwnerRestaurant, AUTO_PAUSE_TIMEOUTS } from './restaurantService';
 import { getNumberSettings } from './settingsService';
 import { lockOrder, assertStatus } from './orderTransition';
 import { queuePaymentVoid } from './outbox';
-import type { RejectOrderBody, OwnerCancelOrderBody } from '../schemas/ownerOrderSchema';
+import type { RejectOrderBody, OwnerCancelOrderBody, CancelRequestBody } from '../schemas/ownerOrderSchema';
 import { dispatchWaitingOrdersNear } from './dispatchService';
+import { restoreCartFromOrder } from './cartService';
+import { resolveOrderIncidents } from './incidents';
+import { cancelLockedOrder } from './orderCancellation';
 
 type AcceptedOrder = {
     id: string;
@@ -62,6 +65,27 @@ const ENDED_COLUMNS = `
     cancel_note AS "cancelNote",
     ended_at AS "endedAt"`;
 
+type CancelRequest = {
+    id: string;
+    orderId: string;
+    status: 'pending' | 'approved' | 'rejected' | 'superseded';
+    reasonCode: string;
+    note: string | null;
+    version: number;
+    createdAt: Date;
+    decidedAt: Date | null;
+};
+
+const CANCEL_REQUEST_COLUMNS = `
+    id,
+    order_id AS "orderId",
+    status,
+    reason_code AS "reasonCode",
+    note,
+    version,
+    created_at AS "createdAt",
+    decided_at AS "decidedAt"`;
+
 type OwnerOrderItem = { name: string; quantity: number };
 type OwnerActiveOrder = {
       id: string;
@@ -89,15 +113,7 @@ async function resetMissedOrders(client: PoolClient, restaurantId: string): Prom
 }
 // The kitchen_late incident ends when the food is ready or the order ends.
 async function resolveKitchenLate(client: PoolClient, orderId: string, note: string): Promise<void> {
-    await client.query(
-        `UPDATE order_incidents
-            SET resolved_at = now(),
-                resolution_note = $2
-          WHERE order_id = $1
-            AND type = 'kitchen_late'
-            AND resolved_at IS NULL`,
-        [orderId, note]
-    );
+    await resolveOrderIncidents(client, orderId, ['kitchen_late'], note);
 }
 
 // placed → accepted, with the prep time the owner promises.
@@ -146,7 +162,30 @@ async function acceptOrder(ownerId: string, orderId: string, prepMinutes?: numbe
     }, `user:${ownerId}`, `accepted, prep ${prep} min`);
 }
 
-// placed → rejected by the owner. The customer's hold is released by the outbox (void).
+// The owner ticks the items they ran out of. Only items of THIS order can be ticked
+// (an id from somewhere else is ignored). Same transaction as the reject.
+async function markOrderItemsUnavailable(
+    client: PoolClient,
+    restaurantId: string,
+    orderId: string,
+    ownerId: string,
+    menuItemIds: string[]
+): Promise<void> {
+    if (menuItemIds.length === 0) return;
+    await client.query(
+        `INSERT INTO restaurant_item_availability (restaurant_id, menu_item_id, available, updated_by)
+         SELECT DISTINCT $1::bigint, oi.menu_item_id, false, $3::bigint
+           FROM order_items oi
+          WHERE oi.order_id = $2
+            AND oi.menu_item_id = ANY($4::bigint[])
+         ON CONFLICT (restaurant_id, menu_item_id)
+         DO UPDATE SET available = false, updated_by = EXCLUDED.updated_by`,
+        [restaurantId, orderId, ownerId, menuItemIds]
+    );
+}
+
+// placed → rejected by the owner. The customer's hold is released by the outbox (void),
+// and the items go back into their cart, the ticked ones flagged unavailable there.
 async function rejectOrder(ownerId: string, orderId: string, body: RejectOrderBody): Promise<EndedOrder>{
     const restaurant = await getOwnerRestaurant(ownerId);
 
@@ -179,6 +218,8 @@ async function rejectOrder(ownerId: string, orderId: string, body: RejectOrderBo
         if (order.paymentIntentId) {
             await queuePaymentVoid(client, order.id, order.paymentIntentId);
         }
+        await markOrderItemsUnavailable(client, restaurant.id, order.id, ownerId, body.unavailableItemIds ?? []);
+        await restoreCartFromOrder(client, order.customerId, order.id, order.restaurantId);
         await resetMissedOrders(client, restaurant.id);
         return rows[0];
     }, `user:${ownerId}`, `rejected: ${body.reasonCode}`);
@@ -216,12 +257,13 @@ async function markOrderReady(ownerId: string, orderId: string): Promise<ReadyOr
      }, `user:${ownerId}`, 'marked ready');
 }
 
+// accepted → cancelled by the owner. Once the food is ready the owner can only ask (requestOrderCancellation).
 async function ownerCancelOrder(ownerId: string, orderId: string, body: OwnerCancelOrderBody): Promise<EndedOrder> {
     const restaurant = await getOwnerRestaurant(ownerId);
 
      const { cancelled, freedCourierId } = await withTransaction(async (client) => {
         const order = await lockOrder(client, orderId, { restaurantId: restaurant.id });
-        
+
         if (order.status === 'cancelled' && order.cancelledBy === 'restaurant') {
             const { rows } = await client.query<EndedOrder>(
                 `SELECT ${ENDED_COLUMNS} FROM orders WHERE id = $1`,
@@ -231,40 +273,53 @@ async function ownerCancelOrder(ownerId: string, orderId: string, body: OwnerCan
         }
         assertStatus(order, ['accepted']);
 
-        const { rows } = await client.query<EndedOrder>(
-            `UPDATE orders
-                SET status = 'cancelled',
-                    cancelled_by = 'restaurant',
-                    cancel_reason = $2,
-                    cancel_note = $3,
-                    courier_id = NULL,
-                    ended_at = now(),
-                    version = version + 1
-              WHERE id = $1
-          RETURNING ${ENDED_COLUMNS}`,
-            [order.id, body.reasonCode, body.note ?? null]
-        );
-        // A courier still deciding on this order: the offer is no longer valid.
-        await client.query(
-            `UPDATE order_offers
-                SET status = 'withdrawn',
-                    responded_at = now()
-              WHERE order_id = $1
-                AND status = 'pending'`,
-            [order.id]
-        );
-
-        if (order.paymentIntentId) {
-            await queuePaymentVoid(client, order.id, order.paymentIntentId);
-        }
-        await resolveKitchenLate(client, order.id, 'order cancelled by the restaurant');
-        return { cancelled: rows[0], freedCourierId: order.courierId };
+        // Withdraws a pending offer, releases the courier, voids, resolves kitchen_late / no_courier / courier_problem
+        const { freedCourierId } = await cancelLockedOrder(client, order, {
+            cancelledBy: 'restaurant',
+            reason: body.reasonCode,
+            note: body.note
+        });
+        const { rows } = await client.query<EndedOrder>(`SELECT ${ENDED_COLUMNS} FROM orders WHERE id = $1`, [order.id]);
+        return { cancelled: rows[0], freedCourierId };
      },`user:${ownerId}`, `cancelled by the restaurant: ${body.reasonCode}`);
 
      if (freedCourierId) {
         await dispatchWaitingOrdersNear(freedCourierId);
      }
     return cancelled;
+}
+
+// The food is ready, so the owner can no longer cancel alone; they ask the admin.
+// One pending request per order (order_cancel_requests_one_pending_uq). Asking again while one is pending
+// returns that one (double click). 201 for a new request, 200 for the existing one.
+async function requestOrderCancellation(
+    ownerId: string,
+    orderId: string,
+    body: CancelRequestBody
+): Promise<{ request: CancelRequest; created: boolean }> {
+    const restaurant = await getOwnerRestaurant(ownerId);
+
+    return withTransaction(async (client) => {
+        const order = await lockOrder(client, orderId, { restaurantId: restaurant.id });
+
+        const pending = await client.query<CancelRequest>(
+            `SELECT ${CANCEL_REQUEST_COLUMNS} FROM order_cancel_requests WHERE order_id = $1 AND status = 'pending'`,
+            [order.id]
+        );
+        if (pending.rows[0]) {
+            return { request: pending.rows[0], created: false };
+        }
+        // accepted: cancel directly (ownerCancelOrder). picked_up and later: only the admin.
+        assertStatus(order, ['ready_for_pickup']);
+
+        const { rows } = await client.query<CancelRequest>(
+            `INSERT INTO order_cancel_requests (order_id, requested_by, reason_code, note)
+             VALUES ($1, $2, $3, $4)
+             RETURNING ${CANCEL_REQUEST_COLUMNS}`,
+            [order.id, ownerId, body.reasonCode, body.note ?? null]
+        );
+        return { request: rows[0], created: true };
+    }, `user:${ownerId}`, `cancellation requested: ${body.reasonCode}`);
 }
 
 // The kitchen board: orders the restaurant still has to answer, cook or hand over.
@@ -306,12 +361,14 @@ async function listOwnerActiveOrders(ownerId: string): Promise<OwnerActiveOrder[
 }
 
 export {
-    acceptOrder, 
-    rejectOrder, 
-    markOrderReady, 
-    ownerCancelOrder, 
-    resetMissedOrders, 
-    resolveKitchenLate, 
-    listOwnerActiveOrders 
+    acceptOrder,
+    rejectOrder,
+    markOrderReady,
+    ownerCancelOrder,
+    requestOrderCancellation,
+    resetMissedOrders,
+    resolveKitchenLate,
+    listOwnerActiveOrders,
+    CANCEL_REQUEST_COLUMNS
 }
-export type { AcceptedOrder, EndedOrder, ReadyOrder, OwnerActiveOrder };
+export type { AcceptedOrder, EndedOrder, ReadyOrder, OwnerActiveOrder, CancelRequest };

@@ -4,11 +4,12 @@ import { withTransaction } from '../database/transaction';
 import { logger } from '../logger';
 import { getNumberSettings } from './settingsService';
 import { findCourierCandidates, SEARCH_RADIUS_M, BOX_M_PER_DEGREE, type CourierCandidate } from './courierSearch';
+import { openOrderIncident } from './incidents';
 
 const MAX_ORDERS_PER_PASS = 50;
 const MAX_ORDERS_PER_KICK = 5;
 
-const SETTING_KEYS = ['dispatch_deadline_s', 'offer_timeout_s', 'courier_fresh_position_s'] as const;
+const SETTING_KEYS = ['dispatch_deadline_s', 'offer_timeout_s', 'courier_fresh_position_s', 'second_round_after_s'] as const;
 type DispatchSettings = Record<(typeof SETTING_KEYS)[number], number>;
 
 type DispatchOrder = { id: string; round: number; restaurantLat: number; restaurantLng: number };
@@ -101,6 +102,22 @@ async function tryOffer(client: PoolClient, order: DispatchOrder, candidate: Cou
     return offer.rowCount === 1;
 }
 
+// The automatic second round: only from round 1, only while searching (not no_courier), only after second_round_after_s.
+// Conditional on dispatch_round = 1, so it runs at most once. dispatch_deadline is NOT moved: no_courier still
+// comes at the original deadline. No version bump: the order's state does not change.
+async function startSecondRound(client: PoolClient, orderId: string, afterS: number): Promise<boolean> {
+    const result = await client.query(
+        `UPDATE orders
+            SET dispatch_round = 2
+          WHERE id = $1
+            AND dispatch_round = 1
+            AND dispatch_state = 'searching'
+            AND dispatch_started_at <= now() - make_interval(secs => $2)`,
+        [orderId, afterS]
+    );
+    return result.rowCount === 1;
+}
+
 async function searchAndOffer(client: PoolClient, order: DispatchOrder, settings: DispatchSettings): Promise<DispatchResult> {
     const candidates = await findCourierCandidates(client, {
         orderId: order.id,
@@ -120,6 +137,13 @@ async function searchAndOffer(client: PoolClient, order: DispatchOrder, settings
             );
             return { orderId: order.id, offeredTo: candidate };
         }
+    }
+
+    // Nobody left in round 1 and the search runs for a while → one automatic second round that
+    // re-asks the couriers who declined (the search query skips those who let it expire). Search again at once.
+    if (candidates.length === 0 && order.round === 1 && (await startSecondRound(client, order.id, settings.second_round_after_s))) {
+        logger.info({ orderId: order.id }, 'Dispatch: second round, asking the decliners again');
+        return searchAndOffer(client, { ...order, round: 2 }, settings);
     }
 
      // Nobody: the longer the search runs, the less often we look (2 → 5 → 10 → 30 s)
@@ -171,6 +195,52 @@ async function dispatchDueOrders(): Promise<number> {
     return started + searched;
 }
 
+// One order searching past dispatch_deadline with nobody assigned → no_courier + one incident.
+// The search goes on in no_courier (claimOrderToSearch takes both), and a pending offer stays valid:
+// the courier's accept works in either state. Returns false when no order is due.
+async function markNextNoCourierOrder(): Promise<boolean> {
+    return withTransaction(async (client) => {
+        const { rows } = await client.query<{ id: string }>(
+            `SELECT id
+               FROM orders
+              WHERE status IN ('accepted', 'ready_for_pickup')
+                AND dispatch_state = 'searching'
+                AND courier_id IS NULL
+                AND dispatch_deadline <= now()
+              ORDER BY dispatch_deadline, id
+              LIMIT 1
+              FOR UPDATE SKIP LOCKED`
+        );
+        const order = rows[0];
+        if (!order) return false;
+
+        await client.query(
+            `UPDATE orders
+                SET dispatch_state = 'no_courier',
+                    version = version + 1
+              WHERE id = $1`,
+            [order.id]
+        );
+        await openOrderIncident(client, {
+            orderId: order.id,
+            type: 'no_courier',
+            openedBy: 'system',
+            details: 'Nobody accepted before the dispatch deadline'
+        });
+        logger.warn({ orderId: order.id }, 'No courier found before the deadline, incident opened');
+        return true;
+    }, 'system:dispatch', 'no courier found before the deadline');
+}
+
+// The no_courier sweep, run by the dispatch job. Returns how many orders it moved to no_courier.
+async function markNoCourierOrders(): Promise<number> {
+    let count = 0;
+    while (count < MAX_ORDERS_PER_PASS && (await markNextNoCourierOrder())) {
+        count++;
+    }
+    return count;
+}
+
 // The kick, called after a COMMIT. If it fails, the timer does the same job 2 s later.
 async function dispatchOrderNow(orderId: string): Promise<void> {
     try {
@@ -197,7 +267,9 @@ async function dispatchWaitingOrdersNear(courierId: string): Promise<void> {
                     AND NOT EXISTS (
                         SELECT 1 FROM order_offers f
                          WHERE f.order_id = o.id
-                           AND (f.status = 'pending' OR (f.courier_id = $1 AND f.round = o.dispatch_round)))
+                           AND (f.status = 'pending'
+                                OR (f.courier_id = $1
+                                    AND (f.round = o.dispatch_round OR f.status IN ('expired', 'withdrawn')))))
                   ORDER BY o.dispatch_started_at, o.id
                   LIMIT $3
                   FOR UPDATE OF o SKIP LOCKED
@@ -220,4 +292,4 @@ async function dispatchWaitingOrdersNear(courierId: string): Promise<void> {
     }
 }
 
-export { dispatchDueOrders, dispatchOrderNow, dispatchWaitingOrdersNear };
+export { dispatchDueOrders, dispatchOrderNow, dispatchWaitingOrdersNear, markNoCourierOrders };

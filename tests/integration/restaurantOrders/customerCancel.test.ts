@@ -72,7 +72,8 @@ describe('T9: refusals (from accepted on, only support can cancel)', () => {
         const res = await customerCancel(orderId, customer);
 
         expect(res.status).toBe(409);
-        expect(res.body.error.details).toEqual({ status: 'ready_for_pickup' });
+        // dispatchState too (the customer can cancel from here only in no_courier)
+        expect(res.body.error.details).toEqual({ status: 'ready_for_pickup', dispatchState: 'not_started' });
     });
 
     it('the restaurant owner cannot use the customer endpoint (403)', async () => {

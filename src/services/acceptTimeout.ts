@@ -3,11 +3,12 @@ import { withTransaction } from '../database/transaction';
 import { logger } from '../logger';
 import { queuePaymentVoid } from './outbox';
 import { AUTO_PAUSE_TIMEOUTS } from './restaurantService';
+import { restoreCartFromOrder } from './cartService';
 
 const MAX_ORDERS_PER_PASS = 50;
 const AUTO_PAUSE_DAYS = 30;
 
-type TimedOutRow = { id: string; restaurantId: string; paymentIntentId: string | null };
+type TimedOutRow = { id: string; customerId: string; restaurantId: string; paymentIntentId: string | null };
 
 async function countMissedOrder(client: PoolClient, restaurantId: string, orderId: string): Promise<boolean>{
     const { rows } = await client.query<{ missed: number }>(
@@ -42,6 +43,7 @@ async function rejectNextTimedOutOrder(): Promise<boolean> {
     return withTransaction(async (client) => {
         const { rows } = await client.query<TimedOutRow>(
             `SELECT id,
+                    customer_id AS "customerId",
                     restaurant_id AS "restaurantId",
                     stripe_payment_intent_id AS "paymentIntentId"
                FROM orders
@@ -69,6 +71,8 @@ async function rejectNextTimedOutOrder(): Promise<boolean> {
         if (order.paymentIntentId) {
             await queuePaymentVoid(client, order.id, order.paymentIntentId);
         }
+        // The customer finds their items back in the cart (only into an empty cart)
+        await restoreCartFromOrder(client, order.customerId, order.id, order.restaurantId);
         const paused = await countMissedOrder(client, order.restaurantId, order.id);
 
         logger.info({ orderId: order.id, restaurantId: order.restaurantId, paused }, 'Restaurant did not answer, order rejected');

@@ -21,7 +21,20 @@ export const declineOfferSchema = z
     })
     .strict()
     .default({});
-    
+
+// The courier's "Report a problem" (a note is required for other)
+export const reportProblemSchema = z
+    .object({
+        category: z.enum(['customer_unreachable', 'wrong_or_missing_items', 'vehicle_issue', 'restaurant_closed', 'other']),
+        note: z.string().trim().min(1).max(1000).optional()
+    })
+    .strict()
+    .refine((body) => body.category !== 'other' || Boolean(body.note), {
+        message: 'A note is required when the category is other',
+        path: ['note']
+    });
+
+export type ReportProblemBody = z.infer<typeof reportProblemSchema>;
 export type CourierPositionBody = z.infer<typeof courierPositionSchema>;
 export type CourierAvailabilityBody = z.infer<typeof courierAvailabilitySchema>;
 export type DeclineOfferBody = z.infer<typeof declineOfferSchema>;

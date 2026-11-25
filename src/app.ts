@@ -17,6 +17,7 @@ import { orderRoutes } from './routes/orderRoutes';
 import { webhookRoutes } from './routes/webhookRoutes';
 import { ownerOrderRoutes } from './routes/ownerOrderRoutes';
 import { courierRoutes } from './routes/courierRoutes';
+import { adminRoutes } from './routes/adminRoutes';
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/owner/menu-items', ownerMenuRoutes);
 app.use('/owner/restaurant', ownerRestaurantRoutes);
 app.use('/owner/orders', ownerOrderRoutes);
 app.use('/courier', courierRoutes);
+app.use('/admin', adminRoutes);
 app.use('/restaurants', restaurantRoutes);
 app.use('/osm', osmRoutes);
 app.use('/me', meRoutes);

@@ -4,9 +4,15 @@ import {
     acceptOrder,
     rejectOrder,
     markOrderReady,
-    ownerCancelOrder
+    ownerCancelOrder,
+    requestOrderCancellation
 } from '../services/ownerOrderService';
-import type { AcceptOrderBody, RejectOrderBody, OwnerCancelOrderBody } from '../schemas/ownerOrderSchema';
+import type { AcceptOrderBody, RejectOrderBody, OwnerCancelOrderBody, CancelRequestBody } from '../schemas/ownerOrderSchema';
+
+async function requestCancellationHandler(req: Request<{ id: string }>, res: Response): Promise<void> {
+    const { request, created } = await requestOrderCancellation(req.user!.id, req.params.id, req.body as CancelRequestBody);
+    res.status(created ? 201 : 200).json(request);
+}
 
 async function listActiveOrdersHandler(req: Request, res: Response): Promise<void> {
     res.json(await listOwnerActiveOrders(req.user!.id));
@@ -34,5 +40,6 @@ export {
     acceptOrderHandler,
     rejectOrderHandler,
     markReadyHandler,
-    ownerCancelOrderHandler
+    ownerCancelOrderHandler,
+    requestCancellationHandler
 };

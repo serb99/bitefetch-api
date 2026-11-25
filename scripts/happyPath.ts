@@ -31,6 +31,7 @@ const PASSWORD = 'Password123!';
 const DOMAIN = 'bitefetch.local';
 
 // How long each wait may take before the run counts as failed
+const COURIER_ONLINE_WAIT_MS = 20_000; // bot start -> online (first position, then availability)
 const WEBHOOK_WAIT_MS = 30_000;   // pay -> placed
 const DELIVERY_WAIT_MS = 300_000; // ready -> delivered (dispatch deadline in dev is 180 s)
 const CAPTURE_WAIT_MS = 60_000;   // delivered -> captured (the payment timer runs every 5 s)
@@ -118,30 +119,8 @@ async function happyPath(options: { apiUrl: string; ownerEmail: string; courierE
     if (cart.totalMinor === null) throw new RunFailed('the cart has no total (delivery fee unknown)');
     step(`cart: ${quantity} x ${item.name}, total ${cart.totalMinor} cents`);
 
-    // 4. Checkout
-    const order = await customer.call<PlacedOrder>('POST', '/orders', { expectedTotalMinor: cart.totalMinor }, {
-        'Idempotency-Key': randomUUID()
-    });
-    const clientSecret =
-        order.clientSecret ?? (await customer.call<{ clientSecret: string }>('GET', `/orders/${order.id}/payment`)).clientSecret;
-    step(`order ${order.orderCode} created (pending_payment)`);
-
-    // 5. Pay. In the browser, Stripe.js confirms with the card the customer typed;
-    //    here the secret key confirms with Stripe's test card. Everything after it is the real flow.
-    const paymentIntentId = clientSecret.split('_secret_')[0];
-    await stripe.paymentIntents.confirm(paymentIntentId, { payment_method: 'pm_card_visa' });
-    step('paid with the test Visa, waiting for the webhook');
-
-    const readOrder = () => customer.call<OrderView>('GET', `/orders/${order.id}`);
-    await waitFor('the webhook (is `stripe listen` running?)', WEBHOOK_WAIT_MS, async () => {
-        const now = await readOrder();
-        if (now.status === 'pending_payment') return undefined;
-        if (now.status !== 'placed') throw new RunFailed(`expected placed, got ${now.status}`);
-        return now;
-    });
-    step('placed (webhook arrived)');
-
-    // 6. A courier goes online near the restaurant. It runs in the background until we stop it.
+    // 4. A courier goes online near the restaurant. It runs in the background until we stop it.
+    //    It comes BEFORE the checkout: checkout needs a fresh courier within 10 km of the restaurant.
     const stopCourier = new AbortController();
     const courierName = options.courierEmail.split('@')[0];
     // A courier that cannot start (wrong password, no profile) must fail the run, not hang it
@@ -159,6 +138,37 @@ async function happyPath(options: { apiUrl: string; ownerEmail: string; courierE
     );
 
     try {
+        const courierView = new ApiClient(options.apiUrl, { email: options.courierEmail, password: PASSWORD });
+        await courierView.login();
+        await waitFor('the courier to go online', COURIER_ONLINE_WAIT_MS, async () => {
+            if (courierStopped) throw new RunFailed(`${courierName} stopped: ${courierStopped}`);
+            const state = await courierView.call<{ availability: string }>('GET', '/courier');
+            return state.availability === 'online' ? state : undefined;
+        });
+
+        // 5. Checkout
+        const order = await customer.call<PlacedOrder>('POST', '/orders', { expectedTotalMinor: cart.totalMinor }, {
+            'Idempotency-Key': randomUUID()
+        });
+        const clientSecret =
+            order.clientSecret ?? (await customer.call<{ clientSecret: string }>('GET', `/orders/${order.id}/payment`)).clientSecret;
+        step(`order ${order.orderCode} created (pending_payment)`);
+
+        // 6. Pay. In the browser, Stripe.js confirms with the card the customer typed;
+        //    here the secret key confirms with Stripe's test card. Everything after it is the real flow.
+        const paymentIntentId = clientSecret.split('_secret_')[0];
+        await stripe.paymentIntents.confirm(paymentIntentId, { payment_method: 'pm_card_visa' });
+        step('paid with the test Visa, waiting for the webhook');
+
+        const readOrder = () => customer.call<OrderView>('GET', `/orders/${order.id}`);
+        await waitFor('the webhook (is `stripe listen` running?)', WEBHOOK_WAIT_MS, async () => {
+            const now = await readOrder();
+            if (now.status === 'pending_payment') return undefined;
+            if (now.status !== 'placed') throw new RunFailed(`expected placed, got ${now.status}`);
+            return now;
+        });
+        step('placed (webhook arrived)');
+
         // 7. The restaurant accepts and has the food ready at once
         await owner.call('POST', `/owner/orders/${order.id}/accept`, { prepMinutes: 10 });
         step('restaurant accepted');

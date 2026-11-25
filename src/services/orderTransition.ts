@@ -11,8 +11,9 @@ type OrderStatus =  | 'pending_payment'
     | 'cancelled'
     | 'rejected'
     | 'expired';
-// A customer sees only their own orders, an owner only their restaurant's.
-type OrderScope = { customerId: string } | { restaurantId: string } | { courierId: string };
+type DispatchState = 'not_started' | 'searching' | 'no_courier' | 'assigned';
+// A customer sees only their own orders, an owner only their restaurant's. The admin any order.
+type OrderScope = { customerId: string } | { restaurantId: string } | { courierId: string } | { anyOrder: true };
 type LockedOrder = {
     id: string;
     status: OrderStatus;
@@ -24,24 +25,26 @@ type LockedOrder = {
     cancelledBy: string | null;
     cancelReason: string | null;
     acceptDeadline: Date | null;
+    dispatchState: DispatchState;
 };
 
-function scopeCondition(scope: OrderScope): [condition: string, id: string] {
-    if ('customerId' in scope) return ['customer_id = $2', scope.customerId];
-    if ('restaurantId' in scope) return ['restaurant_id = $2', scope.restaurantId];
+function scopeCondition(scope: OrderScope): [condition: string, params: string[]] {
+    if ('anyOrder' in scope) return ['TRUE', []];
+    if ('customerId' in scope) return ['customer_id = $2', [scope.customerId]];
+    if ('restaurantId' in scope) return ['restaurant_id = $2', [scope.restaurantId]];
     return [
         `(courier_id = $2 OR EXISTS (
               SELECT 1 FROM order_offers f
                WHERE f.order_id = orders.id
                  AND f.courier_id = $2
                  AND f.status IN ('accepted', 'withdrawn')))`,
-        scope.courierId
+        [scope.courierId]
     ];
 }
 
 async function lockOrder(client: PoolClient, orderId: string, scope: OrderScope): Promise<LockedOrder>{
-    const [condition, scopeId] = scopeCondition(scope);
-    
+    const [condition, scopeParams] = scopeCondition(scope);
+
     const { rows } = await client.query<LockedOrder>(
         `SELECT id,
                 status,
@@ -52,11 +55,12 @@ async function lockOrder(client: PoolClient, orderId: string, scope: OrderScope)
                 stripe_payment_intent_id AS "paymentIntentId",
                 cancelled_by AS "cancelledBy",
                 cancel_reason AS "cancelReason",
-                accept_deadline AS "acceptDeadline"
+                accept_deadline AS "acceptDeadline",
+                dispatch_state AS "dispatchState"
             FROM orders
           WHERE id = $1 AND ${condition}
           FOR UPDATE`,
-          [orderId, scopeId]
+          [orderId, ...scopeParams]
     );
     const order = rows[0];
     if (!order) {
@@ -82,5 +86,17 @@ function assertAssignedCourier(order: LockedOrder, courierId: string): void {
     }
 }
 
-export { lockOrder, assertStatus, assertAssignedCourier };
-export type { OrderStatus, OrderScope, LockedOrder };
+// The admin acts on a page read earlier: the order must still be the version they saw.
+function assertVersion(order: LockedOrder, seenVersion: number): void {
+    if (order.version !== seenVersion) {
+        throw new AppError(409, 'VERSION_CONFLICT', 'The order changed since you loaded it', {
+            status: order.status,
+            version: order.version
+        });
+    }
+}
+
+const ACTIVE_STATUSES: readonly OrderStatus[] = ['pending_payment', 'placed', 'accepted', 'ready_for_pickup', 'picked_up'];
+
+export { lockOrder, assertStatus, assertAssignedCourier, assertVersion, ACTIVE_STATUSES };
+export type { OrderStatus, OrderScope, LockedOrder, DispatchState };

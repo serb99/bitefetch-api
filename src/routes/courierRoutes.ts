@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireRole } from '../middleware/requireRole';
 import { validate } from '../middleware/validate';
-import { courierPositionSchema, courierAvailabilitySchema, declineOfferSchema } from '../schemas/courierSchema';
+import { courierPositionSchema, courierAvailabilitySchema, declineOfferSchema, reportProblemSchema } from '../schemas/courierSchema';
 import {
     getCourierStateHandler,
     updatePositionHandler,
@@ -16,7 +16,8 @@ import {
 import {
     getCurrentOrderHandler,
     pickUpOrderHandler,
-    deliverOrderHandler
+    deliverOrderHandler,
+    reportProblemHandler
 } from '../controllers/courierOrderController';
 import { validateIdParam } from '../middleware/validateIdParam';
 
@@ -35,5 +36,6 @@ router.post('/offers/:id/decline', validateIdParam, validate(declineOfferSchema)
 router.get('/orders/current', getCurrentOrderHandler);
 router.post('/orders/:id/pickup', validateIdParam, pickUpOrderHandler);
 router.post('/orders/:id/deliver', validateIdParam, deliverOrderHandler);
+router.post('/orders/:id/problems', validateIdParam, validate(reportProblemSchema), reportProblemHandler);
 
 export { router as courierRoutes };

@@ -1,43 +1,58 @@
 import { withTransaction } from '../database/transaction';
-import { queuePaymentVoid } from './outbox';
+import { AppError } from '../errors/AppError';
 import { getCustomerOrder, type OrderView } from './orderService';
 import { restoreCartFromOrder } from './cartService';
-import { lockOrder, assertStatus } from './orderTransition';
+import { lockOrder, type LockedOrder } from './orderTransition';
+import { cancelLockedOrder } from './orderCancellation';
+import { dispatchWaitingOrdersNear } from './dispatchService';
 
-// The customer cancels their own order.
-// pending_payment → cancelled: left checkout; the cart comes back so they can try again.
-// placed → cancelled: paid but changed their mind before the restaurant accepted; the hold is released.
-// From accepted on, only support can cancel
-async function cancelCustomerOrder(customerId: string, orderId: string): Promise<OrderView> {
-    await withTransaction(async (client) => {
+function notCancellable(order: LockedOrder, message = 'This order can no longer be cancelled'): AppError {
+    return new AppError(409, 'ORDER_NOT_CANCELLABLE', message, {
+        status: order.status,
+        dispatchState: order.dispatchState
+    });
+}
+
+// Which customer cancel applies now, or why none does.
+// pending_payment: left checkout; the cart comes back so they can try again.
+// placed: paid but changed their mind before the restaurant accepted; the hold is released.
+// accepted / ready_for_pickup: only while no courier was found (dispatch_state no_courier, nobody assigned).
+// Anything else (the kitchen is cooking with a courier coming, or the food left): only support can cancel.
+function customerCancelReason(order: LockedOrder): 'abandoned_checkout' | 'customer_cancelled' | 'no_courier' {
+    if (order.status === 'pending_payment') return 'abandoned_checkout';
+    if (order.status === 'placed') return 'customer_cancelled';
+
+    if (order.status === 'accepted' || order.status === 'ready_for_pickup') {
+        if (order.dispatchState === 'no_courier' && order.courierId === null) return 'no_courier';
+        if (order.dispatchState === 'assigned') {
+            throw notCancellable(order, 'A courier just accepted this order');
+        }
+    }
+    throw notCancellable(order);
+}
+
+async function cancelCustomerOrder(customerId: string, orderId: string, note?: string): Promise<OrderView> {
+    const freedCourierId = await withTransaction(async (client) => {
         const order = await lockOrder(client, orderId, { customerId });
 
+        // Double tap: already cancelled by this customer
         if (order.status === 'cancelled' && order.cancelledBy === 'customer') {
-            return;
+            return null;
         }
-        assertStatus(order, ['pending_payment', 'placed'], 'ORDER_NOT_CANCELLABLE', 'This order can no longer be cancelled');
+        const reason = customerCancelReason(order);
 
-        const wasPlaced = order.status === 'placed';
-        await client.query(
-            `UPDATE orders
-                SET status = 'cancelled',
-                    cancelled_by = 'customer',
-                    cancel_reason = $2,
-                    ended_at = now(),
-                    version = version + 1
-              WHERE id = $1`,
-            [order.id, wasPlaced ? 'customer_cancelled' : 'abandoned_checkout']
-        );
-        
-        // No PaymentIntent (Stripe was down at checkout): nothing on the card, nothing to void.
-        if (order.paymentIntentId) {
-            await queuePaymentVoid(client, order.id, order.paymentIntentId);
-        }
-        if (!wasPlaced) {
+        const { freedCourierId } = await cancelLockedOrder(client, order, { cancelledBy: 'customer', reason, note });
+
+        if (reason === 'abandoned_checkout') {
             await restoreCartFromOrder(client, customerId, order.id, order.restaurantId);
         }
+        return freedCourierId;
     }, `user:${customerId}`, 'cancelled by the customer');
 
+    // No courier is assigned in the no_courier case, but keep the rule of every cancel: a freed courier is offered work.
+    if (freedCourierId) {
+        await dispatchWaitingOrdersNear(freedCourierId);
+    }
     return getCustomerOrder(customerId, orderId);
 }
 

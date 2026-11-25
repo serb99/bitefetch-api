@@ -16,6 +16,9 @@ Test database: set `DB_NAME_TEST`, then `npm run migrate:test:up`.
 
 ## Running locally (5 processes)
 
+Shortcut: `dev.ps1` in the folder that holds both repos starts all of them in Windows Terminal tabs
+(`.\dev.ps1 -Simulator` adds the courier simulator, `.\dev.ps1 -Stop` stops everything). By hand:
+
 | # | Where | Command | Port |
 |---|---|---|---|
 | 1 | bitefetch-api | `npm run dev` (HTTP only) | 3000 |

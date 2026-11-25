@@ -80,7 +80,7 @@ describe('races in dispatch', () => {
                 expect(row.courier_id).toBeNull();
             }
         });
-    });
+    }, 20_000); // 8 runs with ~190 ms of sleeps each: about 5 s, too close to Jest's default 5 s
 
     it('S5 accept vs T11 restaurant cancel: the cancel always wins in the end, the offer matches', async () => {
         await repeat(async () => {

@@ -3,7 +3,8 @@ import { expirePendingPayments } from '../services/paymentExpiry';
 import { rejectTimedOutOrders } from '../services/acceptTimeout';
 import { processPaymentOutbox } from '../services/paymentOutbox';
 import { expireTimedOutOffers } from '../services/offerTimeout';
-import { dispatchDueOrders } from '../services/dispatchService';
+import { dispatchDueOrders, markNoCourierOrders } from '../services/dispatchService';
+import { sweepLateOrders } from '../services/incidentSweeps';
 import { reconcilePendingPayments } from '../services/paymentReconciliation';
 import { setSilentCouriersOffline } from '../services/courierAutoOffline';
 import { runRetention } from '../services/retention';
@@ -22,10 +23,14 @@ const JOBS: JobDefinition[] = [
     { 
         name: 'dispatch', 
         everyMs: 2_000, 
-        run: async () => (await expireTimedOutOffers()) + (await dispatchDueOrders())
+        // expire unanswered offers (+ missed-offer count), mark orders past the search deadline no_courier, then search couriers
+        run: async () =>
+            (await expireTimedOutOffers()) + (await markNoCourierOrders()) + (await dispatchDueOrders())
     },
     { name: 'payment-reconciliation', everyMs: 60_000, run: reconcilePendingPayments },
     { name: 'courier-auto-offline', everyMs: 15_000, run: setSilentCouriersOffline },
+    // kitchen_late and delivery_overdue incidents
+    { name: 'incident-sweep', everyMs: 30_000, run: sweepLateOrders },
     { name: 'retention', everyMs: 60 * 60_000, run: runRetention }
 ];
 

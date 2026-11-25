@@ -4,6 +4,7 @@ import { withTransaction } from '../database/transaction';
 import { AppError } from '../errors/AppError';
 import { lockActiveCourier, closeOfferAsDeclined, type OfferRef, type DeclineReason } from './courierService';
 import { dispatchOrderNow } from './dispatchService';
+import { RESET_MISSED_OFFERS_SQL } from './offerTimeout';
 import type { DeclineOfferBody } from '../schemas/courierSchema';
 import type { OrderStatus } from './orderTransition';
 import { getCurrentOrder, getRouteToRestaurant, type CourierOrder } from './courierOrderService';
@@ -90,6 +91,8 @@ async function declineOffer(courierId: string, offerId: string, body: DeclineOff
         if (stored.status !== 'declined') {
             throw offerClosed(stored.status);
         }
+        // An answer: the "missed offers in a row" count starts again
+        await client.query(RESET_MISSED_OFFERS_SQL, [courierId]);
         return { declined: stored, orderToDispatch: changed ? offer.orderId : null };
     }, `user:${courierId}`, 'offer declined');
 
@@ -146,6 +149,8 @@ async function acceptOffer(courierId: string, offerId: string): Promise<AcceptRe
                     AND resolved_at IS NULL`,
                 [offer.orderId]
             );
+            // An answer: the "missed offers in a row" count starts again
+            await client.query(RESET_MISSED_OFFERS_SQL, [courierId]);
         }
 
         const { rows: orders } = await client.query<AcceptedOffer & { courierId: string | null }>(

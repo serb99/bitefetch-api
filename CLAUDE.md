@@ -35,9 +35,13 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
     (placed by accept_deadline, accepted by estimated_ready_at, ready by ready_at). Items as { name, quantity }, no customer data.
   - POST /owner/orders/:id/accept { prepMinutes? 10-60 step 5, default prep_minutes_default } (T6; body may be absent)
     → 409 ACCEPT_WINDOW_OVER after accept_deadline.
-  - POST /owner/orders/:id/reject { reasonCode: out_of_stock|too_busy|closing_soon|other, note? (required for other) } (T7)
+  - POST /owner/orders/:id/reject { reasonCode: out_of_stock|too_busy|closing_soon|other, note? (required for other),
+    unavailableItemIds? (M9: menu item ids OF THIS ORDER → unavailable at this restaurant; others ignored) } (T7).
+    T7 and T8 put the items back into the customer's cart (only into an empty cart).
   - POST /owner/orders/:id/ready (T10), POST /owner/orders/:id/cancel { reasonCode: out_of_stock|kitchen_issue|too_busy|other, note? } (T11, only while accepted)
   - All four: 200 with the order's new state, the same body on a repeat (double click); wrong status → 409 ORDER_STATUS_CHANGED with details.status.
+  - POST /owner/orders/:id/cancel-request { same body as T11 } (T14 step 1, M9, only while ready_for_pickup) → 201 the pending
+    request { id, orderId, status, reasonCode, note, version, createdAt, decidedAt }; again while one is pending → 200 with it.
 - Courier (courier role + a courier_profiles row, else 403 NO_COURIER_PROFILE; the services lock the users row, so a
   suspended courier gets 403 ACCOUNT_NOT_ACTIVE; M7):
   - GET /courier: state (availability, vehicleType, positionFresh, ...).
@@ -57,15 +61,36 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
     POST /courier/orders/:id/deliver (T13, from picked_up). Both check the STORED position: older than
     courier_fresh_position_s → 409 POSITION_STALE, farther than location_check_radius_m (150) → 409 TOO_FAR_AWAY
     { distanceM, maxDistanceM }. A courier who lost the order → 409 ORDER_STATUS_CHANGED; one who never had it → 404 ORDER_NOT_FOUND.
+  - POST /courier/orders/:id/problems { category: customer_unreachable|wrong_or_missing_items|vehicle_issue|restaurant_closed|other,
+    note? (required for other, max 1000) } (R5, M9) → 201 the courier_problem incident { id, orderId, category, details, openedAt };
+    one open per order (again → 200 with it). Own order in accepted/ready_for_pickup/picked_up; never changes the order.
+- Admin (admin role + a live session: requireLiveSession; M9, one order at a time, the lists come in M11). Every action needs
+  the version the admin saw → 409 VERSION_CONFLICT { status, version }; wrong state → 409 ORDER_STATUS_CHANGED { status,
+  dispatchState }; audit actor admin:{id}, the reason in order_status_history. All answer with the admin order view.
+  - GET /admin/orders/:id: order + version, dispatchState/Round/Deadline, courierId, times, cancel fields, incidents[], cancelRequests[].
+  - POST /admin/orders/:id/cancel { reason (3-500), version } (T15, any non-terminal; cancel_reason admin_cancelled, note = reason).
+  - POST /admin/orders/:id/mark-picked-up { reason, version } (T16, a courier assigned, no location check).
+  - POST /admin/orders/:id/mark-delivered { reason, version } (T17, from picked_up, captures). An open courier_problem
+    customer_unreachable younger than customer_unreachable_wait_s (600) → 409 CUSTOMER_WAIT_NOT_OVER { waitS, secondsLeft } (R6).
+  - POST /admin/orders/:id/retry-dispatch { version } (S7, from no_courier: round + 1, new deadline, no_courier incident resolved).
+  - POST /admin/orders/:id/reassign-courier { reason, version } (S8, assigned before pickup: offer withdrawn, courier_id NULL,
+    searching with a new deadline, courier_problem resolved; the old courier is never offered this order again).
+  - POST /admin/cancel-requests/:id/approve|reject { version } (T14 step 2; version = the REQUEST's version). Approve =
+    cancelled as by the restaurant (its reason code). Unknown → 404 CANCEL_REQUEST_NOT_FOUND; decided or superseded (the
+    courier picked up first) → 409 CANCEL_REQUEST_CLOSED { requestStatus, status }.
 - Customer only:
   - GET|POST /addresses, PATCH|DELETE /addresses/:id, PUT /addresses/:id/default
   - GET|DELETE /cart, PUT|DELETE /cart/items/:menuItemId (body { restaurantId, quantity }), PUT /cart/address { addressId }
   - POST /orders (header Idempotency-Key, body { expectedTotalMinor }; 201 new, 200 replay; response = order + clientSecret,
     null if Stripe failed), GET /orders?limit&before, GET /orders/:id (database only, never calls Stripe),
     GET /orders/:id/payment → { clientSecret } (creates or retrieves the PaymentIntent; 409 ORDER_NOT_PAYABLE if not pending_payment),
-    POST /orders/:id/cancel (T5 while pending_payment → abandoned_checkout + cart restored; T9 while placed → customer_cancelled,
-    no cart restore; 200 with the order, also on a repeat; from accepted on 409 ORDER_NOT_CANCELLABLE with details.status).
-    The order view also has paymentAttempts, maxPaymentAttempts, lastPaymentError, cancelReason.
+    POST /orders/:id/cancel { note? (max 500) } (T5 while pending_payment → abandoned_checkout + cart restored; T9 while placed →
+    customer_cancelled, no cart restore; M9 T18 while accepted/ready_for_pickup with dispatch_state no_courier and nobody
+    assigned → cancel_reason no_courier, offer withdrawn, incident resolved; 200 with the order, also on a repeat; otherwise 409 ORDER_NOT_CANCELLABLE
+    { status, dispatchState }, message "A courier just accepted this order" when assigned).
+    POST /orders also refuses with 409 NO_COURIER_NEARBY when no online, active courier with a fresh position is within
+    10 km of the restaurant (T1 guard, platform setting checkout_courier_check: 1 on, 0 off; 0 in the test database).
+    The order view also has paymentAttempts, maxPaymentAttempts, lastPaymentError, cancelReason, cancelNote, dispatchState.
   - GET /orders/:id/tracking (M7b, polled every 3 s, database only) → { orderId, status, leg, restaurant {name,lat,lng},
     destination {lat,lng}, courier { firstName, vehicleType, position { lat, lng, headingDeg, ageS, stale } | null } | null }.
     Courier only while courier_id is set AND status is accepted/ready_for_pickup/picked_up (the status check is in the
@@ -79,7 +104,8 @@ Paths as Express sees them; the browser calls them through nginx with an `/api` 
 - 401: UNAUTHENTICATED, ACCESS_TOKEN_EXPIRED, INVALID_CREDENTIALS, INVALID_REFRESH_TOKEN, SESSION_ENDED
 - 403: FORBIDDEN, ACCOUNT_NOT_ACTIVE, NO_RESTAURANT, BRAND_NOT_EDITABLE, NO_COURIER_PROFILE
 - 404: NOT_FOUND, USER_NOT_FOUND, RESTAURANT_NOT_FOUND, MENU_ITEM_NOT_FOUND, ADDRESS_NOT_FOUND, ORDER_NOT_FOUND, PLACE_NOT_FOUND,
-  OFFER_NOT_FOUND
+  OFFER_NOT_FOUND, CANCEL_REQUEST_NOT_FOUND
+- 409 (M9): NO_COURIER_NEARBY, VERSION_CONFLICT, CANCEL_REQUEST_CLOSED, CUSTOMER_WAIT_NOT_OVER
 - 409: CONFLICT, CONSTRAINT_VIOLATION, REFERENCE_VIOLATION, EMAIL_TAKEN, REFRESH_IN_PROGRESS, RESTAURANT_ALREADY_CLAIMED,
   RESTAURANT_AUTO_PAUSED, RESTAURANT_UNAVAILABLE, RESTAURANT_CLOSED, ADDRESS_LIMIT, CART_EMPTY, CART_NO_ADDRESS,
   CART_OTHER_RESTAURANT, ITEM_UNAVAILABLE, PRICE_CHANGED, ORDER_NOT_PAYABLE, ORDER_NOT_CANCELLABLE,
@@ -244,16 +270,57 @@ settings cache, hourly retention. S6 no_courier stays in M9. Stayed TypeScript (
   timers, the 'dispatch' entry of JOBS). Also re-ran payments + dispatch + restaurantOrders: 240 green.
   No src bugs found by the tests (the unused-$1 bug in auto-offline was caught and fixed before them).
 
+## Done: M9 Unhappy paths and incidents (2026-11-24, code + 110 tests; written by Claude Code at the developer's request, not piece by piece)
+Decisions: admin ACTIONS on one order now (T14 decide, T15, T16, T17, S7, S8 + GET /admin/orders/:id), the admin lists /
+queues stay in M11; the admin's version = orders.version (T14: the request's own version); audit actor admin:{id}.
+- Migration 1794200000000: platform setting checkout_courier_check (1). Run `npm run migrate:up` on the dev DB.
+  With 1, a browser checkout needs a courier online (simulator), else set it to 0 in the dev DB.
+- orderCancellation.ts cancelLockedOrder: the one "→ cancelled" for T5/T9/T11/T14/T15/T18 (courier released unless picked
+  up, pending offer withdrawn, pending cancel request superseded, void, every open incident resolved). Returns the freed
+  courier → dispatchWaitingOrdersNear after the commit. orderTransition: scope { anyOrder: true }, dispatchState in
+  LockedOrder, assertVersion (VERSION_CONFLICT), ACTIVE_STATUSES.
+- incidents.ts openOrderIncident (ON CONFLICT on the open-per-type index) / resolveOrderIncidents (types or 'all').
+- orderCancelService: T18 (no_courier + courier_id NULL → cancel_reason no_courier), optional note → cancel_note.
+- ownerOrderService: T7 unavailableItemIds (restaurant_item_availability, only items of the order) + cart restore
+  (also T8 in acceptTimeout); T11 via cancelLockedOrder; requestOrderCancellation (T14 step 1).
+- Missed offers (flow 3 Q2): offerTimeout S4 is one statement (expire + consecutive_missed_offers + 1, at
+  MISSED_OFFERS_LIMIT 2 an online courier goes offline missed_offers); decline (S3) and accept (S5) reset to 0.
+- dispatchService: S6 markNoCourierOrders (dispatch job: S4 → S6 → S1/S2; incident no_courier), S9 startSecondRound
+  (round 1, searching, second_round_after_s, no candidate at all → round 2 at once; deadline not moved; at most once).
+  courierSearch + dispatchWaitingOrdersNear: a courier whose offer for THIS order expired or was withdrawn (S8) is never
+  asked again for it, in any round (so round 2 re-asks only decliners). hasCourierNear for the T1 guard.
+- incidentSweeps.ts (job incident-sweep, 30 s): kitchen_late (accepted, estimated_ready_at + 600 s) and delivery_overdue
+  (picked_up, estimated_delivery_at + 1800 s); one statement each, FOR UPDATE OF o SKIP LOCKED (re-checks the status, so a
+  ready/delivered order never gets one), once per order (not reopened after the admin resolved it).
+- courierOrderService: markPickedUp / markDelivered shared by T12/T16 and T13/T17 (deliver now resolves every open
+  incident but capture_failed); reportProblem (R5).
+- adminOrderService.ts + adminRoutes (requireAuth, requireRole('admin'), requireLiveSession) + adminSchema.
+- scripts/happyPath.ts: the courier goes online BEFORE the checkout (T1 guard) and the run waits until GET /courier says online.
+  Not re-run (needs the API): run `npm run happy-path` once.
+- Tests: tests/integration/unhappy/* (110, helpers in tests/helpers/unhappy.ts; createAdmin logs in for real because of
+  requireLiveSession): one file per diagram page: restaurantRejects (9), courierDeclines (9), offerTimesOut (9),
+  nobodyAccepts (20: S6, kick from no_courier, S9 ×4, S7, two admins, T15, T18 + T18 vs accept ×6), customerCancels (10),
+  paymentFails (8); plus incidents (15), adminActions (23), checkoutCourierGuard (7). setupDb sets checkout_courier_check 0.
+  Changed for the new behaviour: customerCancel (details has dispatchState), jobList (incident-sweep), dispatch/races
+  (accept vs expiry got a 20 s timeout: about 5 s already in M8, flaky at Jest's default 5 s).
+  Re-ran unhappy + restaurantOrders + dispatch + payments + worker + orders + tracking + unit: 530 green. No src bugs found.
+
 ## Next
-1. Run the full suite once (`npm test`).
-2. M9 Unhappy paths and incidents (includes S6 no_courier).
-3. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer). Dev now needs `npm run worker` too.
-4. D1 note "harder than planned" in the tracker (tag d1-happy-path is on 575e4e4, local only).
-5. Web for M6 (owner board) — the developer does it later.
-Known gaps left on purpose: live updates instead of polling (M10);
-owner actions do not re-check users.status (stateless access token, like the other owner routes); T7 "mark ticked
-items unavailable" (review D1) not built; T10 ready does not kick dispatch (the 2 s timer picks it up); the S4 sweep
-does not kick dispatch either (the order's next_search_at already equals the offer's expires_at, so the next tick searches it).
+Done 2026-11-24: migrate:up on the dev DB, happy-path passed with the changed script, full `npm test` green (D2).
+An unhappy-paths script against real Stripe was considered and skipped (flows checked by hand in M5, covered by the
+tests; the Playwright e2e in M13 covers them through the UI). Ideas #2 robot couriers and #3 "use my location" are in
+docs/design/notes/future-ideas.md.
+1. Tag d2-unhappy-paths (the developer).
+2. Web for M6 (owner board): the developer builds it. It unblocks step 4.
+3. Web for M9: OrderPage shows Cancel while dispatchState = no_courier (customer cancel when no courier is found) and
+   the cancel note; checkout shows NO_COURIER_NEARBY.
+4. Check the M7b DoD in the browser with `npm run simulate:courier` (the developer). Dev needs `npm run worker` too.
+5. D1 note "harder than planned" in the tracker (tag d1-happy-path is on 575e4e4, local only).
+6. M9b Robot couriers, API part (tracker; design in future-ideas.md #2), agreed 2026-11-24. Then M10 (realtime) or M11 (admin lists).
+Known gaps left on purpose: live updates instead of polling (M10); no socket events for M9 (offer.closed, incident.opened, ...: M10);
+owner actions do not re-check users.status (stateless access token, like the other owner routes); T10 ready does not kick
+dispatch (the 2 s timer picks it up); the S4 sweep does not kick dispatch either (the order's next_search_at already
+equals the offer's expires_at, so the next tick searches it); admin retry-capture (flow 6) is M11 (see Parked).
 
 ## Parked
 - Admin approve (M11) must copy openingHours from application details into the restaurant.

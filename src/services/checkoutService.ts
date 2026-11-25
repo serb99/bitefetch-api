@@ -9,6 +9,7 @@ import { generateOrderCode } from '../utils/orderCode';
 import type { OpeningHours } from '../utils/openingHours';
 import { ensurePaymentIntent } from './paymentService';
 import { logger } from '../logger';
+import { hasCourierNear } from './courierSearch';
 
 type CheckoutResult = { order: OrderView; created: boolean; clientSecret: string | null };
 
@@ -100,6 +101,16 @@ async function createOrder(
         }
         if (!isOrderable(restaurant, new Date())) {
             throw new AppError(409, 'RESTAURANT_CLOSED', 'This restaurant is closed right now');
+        }
+
+        // 4b. a courier must be around: if nobody could deliver it, so do not take the money. Switchable
+        // (platform setting checkout_courier_check, 0 in the test database).
+        const courierCheck = await getNumberSettings(['checkout_courier_check', 'courier_fresh_position_s'] as const);
+        if (
+            courierCheck.checkout_courier_check === 1 &&
+            !(await hasCourierNear(client, restaurant.lat, restaurant.lng, courierCheck.courier_fresh_position_s))
+        ) {
+            throw new AppError(409, 'NO_COURIER_NEARBY', 'No courier is available near this restaurant right now');
         }
 
         //5. the address must still be the customer's own

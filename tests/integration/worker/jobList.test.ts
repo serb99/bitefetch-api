@@ -7,6 +7,7 @@ it('every job of the system is listed once, with a positive interval', () => {
         'accept-timeout',
         'courier-auto-offline',
         'dispatch',
+        'incident-sweep',
         'payment-expiry',
         'payment-outbox',
         'payment-reconciliation',

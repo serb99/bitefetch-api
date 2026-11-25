@@ -3,7 +3,7 @@ import { AppError } from '../errors/AppError';
 import { idempotencyKeySchema } from '../schemas/checkoutSchema';
 import { createOrder } from '../services/checkoutService';
 import { listCustomerOrders, getCustomerOrder } from '../services/orderService';
-import { listOrdersQuerySchema } from '../schemas/orderSchema';
+import { listOrdersQuerySchema, type CancelOrderBody } from '../schemas/orderSchema';
 import { ensurePaymentIntent } from '../services/paymentService'
 import { cancelCustomerOrder } from '../services/orderCancelService';
 import { getOrderTracking, getOrderRoute } from '../services/trackingService';
@@ -41,7 +41,8 @@ async function getOrderPaymentHandler(req: Request<{ id: string }>, res: Respons
 }
 
 async function cancelOrderHandler(req: Request<{ id: string }>, res: Response) {
-    res.json(await cancelCustomerOrder(req.user!.id, req.params.id));
+    const body = req.body as CancelOrderBody;
+    res.json(await cancelCustomerOrder(req.user!.id, req.params.id, body.note));
 }
 
 async function getOrderTrackingHandler(req: Request<{ id: string }>, res: Response) {

@@ -46,10 +46,12 @@ async function findCourierCandidates(client: PoolClient, search: SearchInput): P
                        SELECT 1 FROM order_offers f
                         WHERE f.courier_id = p.courier_id
                           AND f.status = 'pending')
+                   -- not asked this round; and in any later round a courier who let this order's offer
+                   -- expire, or was taken off it by the admin (withdrawn), is not asked again: only decliners are
                    AND NOT EXISTS (
                        SELECT 1 FROM order_offers f
                         WHERE f.order_id = $8
-                          AND f.round = $9
+                          AND (f.round = $9 OR f.status IN ('expired', 'withdrawn'))
                           AND f.courier_id = p.courier_id)
                 ) c
           WHERE c.distance <= $10
@@ -66,5 +68,33 @@ async function findCourierCandidates(client: PoolClient, search: SearchInput): P
     return rows;
 }
 
-export { findCourierCandidates, SEARCH_RADIUS_M };
+// Checkout guard: is there any online, active courier with a fresh position within SEARCH_RADIUS_M
+// of the restaurant? Busy couriers count too: they may be free by the time the food is ready.
+async function hasCourierNear(client: PoolClient, lat: number, lng: number, freshPositionS: number): Promise<boolean> {
+    const latDelta = SEARCH_RADIUS_M / BOX_M_PER_DEGREE;
+    const lngDelta = latDelta / Math.cos((lat * Math.PI) / 180);
+
+    const { rows } = await client.query<{ found: boolean }>(
+        `SELECT EXISTS (
+             SELECT 1
+               FROM courier_positions p
+               JOIN courier_profiles cp ON cp.user_id = p.courier_id
+               JOIN users u ON u.id = p.courier_id
+              WHERE p.lat BETWEEN $3::float8 AND $4::float8
+                AND p.lng BETWEEN $5::float8 AND $6::float8
+                AND p.received_at > now() - make_interval(secs => $7)
+                AND cp.availability = 'online'
+                AND u.status = 'active'
+                AND 2 * 6371000 * asin(sqrt(
+                        power(sin(radians(p.lat - $1::float8) / 2), 2) +
+                        cos(radians($1::float8)) * cos(radians(p.lat)) *
+                        power(sin(radians(p.lng - $2::float8) / 2), 2)
+                    )) <= $8
+         ) AS found`,
+        [lat, lng, lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta, freshPositionS, SEARCH_RADIUS_M]
+    );
+    return rows[0].found;
+}
+
+export { findCourierCandidates, hasCourierNear, SEARCH_RADIUS_M };
 export type { CourierCandidate, SearchInput };

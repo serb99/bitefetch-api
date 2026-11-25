@@ -37,6 +37,9 @@ type OrderView = {
     maxPaymentAttempts: number;      // from platform_settings: at this number the order expires
     lastPaymentError: string | null;  // Stripe's message for the last decline, written for the customer
     cancelReason: string | null;      // why it ended: payment_window, too_many_attempts, abandoned_checkout...
+    cancelNote: string | null;        // free text given with the cancel or reject
+    // the web shows Cancel while the courier search failed (no_courier and nobody assigned)
+    dispatchState: 'not_started' | 'searching' | 'no_courier' | 'assigned';
     createdAt: Date;
 };
 
@@ -76,6 +79,8 @@ async function getCustomerOrder(customerId: string, orderId: string): Promise<Or
                 o.payment_attempts AS "paymentAttempts",
                 o.last_payment_error AS "lastPaymentError",
                 o.cancel_reason AS "cancelReason",
+                o.cancel_note AS "cancelNote",
+                o.dispatch_state AS "dispatchState",
                 o.created_at AS "createdAt"
             FROM orders o
             JOIN restaurants r ON r.id = o.restaurant_id
